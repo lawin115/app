@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only end-to-end verification of the sign-out → re-login UX bug fix on the public EXPO_PUBLIC_BACKEND_URL preview (mobile viewport 390x844). Full round-trip executed: (1) register fresh customer → lands on Book screen; (2) place an order (Downtown → Airport Terminal 1, VIP) → appears in My rides with status 'Awaiting'; (3) tap Sign out on Customer → Profile → correctly redirected to Auth / Login screen; (4) sign in as seeded admin (admin@luxedrive.com / Admin1234) → lands on Company Orders dashboard and the just-placed customer order is visible; (5) tap Sign out on Company → Profile → correctly redirected to Auth / Login screen; (6) sign in again as same customer → lands on Book screen and My rides still shows the previous order with correct pickup/dropoff. Both Profile screens correctly call `await logout()` then `router.replace('/(auth)/login')`. No red-screen or runtime errors. All 13 verification steps passed.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Console warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' emitted across screens. Non-blocking but should be migrated. Reference: /app/frontend/src/theme (shadow.sm/md/lg usages across Profile, Book, Orders cards)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_luxedrive.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: replace `shadow*` style props with `boxShadow` (or wrap in Platform.select) in /app/frontend/src/theme.* to silence RN Web deprecation warnings.",
+    "No functional action needed for this iteration — sign-out → re-login fix is verified working on preview."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/(customer)/profile.tsx and /app/frontend/app/(company)/profile.tsx both correctly await `logout()` before calling `router.replace('/(auth)/login')`, ensuring the auth context is cleared before navigation so the auth-gated redirect in app/index.tsx does not bounce back.",
+    "auth.tsx `logout()` clears the token store before setting user to null — correct order.",
+    "Login screen `submit()` already routes company admins to /(company)/orders and customers to /(customer)/book, so re-login lands on the correct tab group."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "100% (13/13 steps)"},
+  "seed_data_creation": "Created one TEST_ customer account on the fly (test_cust_<timestamp>@test.com / Pass1234) and one order via the UI. No manual DB seeding.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Logout flow is now driven by router.replace('/(auth)/login') right after await logout() in both profile.tsx files. Testing via the public EXPO_PUBLIC_BACKEND_URL works end-to-end on mobile viewport. Playwright selectors are stable (logout-button, auth-screen, book-screen, profile-screen, request-ride-button, pickup-input, dropoff-input, email-input, password-input, auth-submit-button, login-tab, register-tab, name-input).",
+  "rca_of_issue": "Previous iteration added logout buttons but only cleared auth state without navigating out of the (customer)/(company) stack, so the empty-user tabs would briefly render or users would stay on Profile. Fix added `router.replace('/(auth)/login')` after `await logout()` in both profile screens. Verified: tapping Sign out now takes the user to the Auth screen immediately in both roles, and re-logging in as a different role correctly lands on that role's home tab."
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -17,8 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   MapPin,
   Flag,
-  CalendarBlank,
-  Clock,
   NotePencil,
   CheckCircle,
   Lightning,
@@ -29,6 +27,7 @@ import {
 import { useAuth } from "@/src/auth";
 import { api, CarType, PricingQuote } from "@/src/api";
 import { MapPicker, Pin } from "@/src/components/map-picker";
+import { DateTimeField } from "@/src/components/datetime-field";
 import {
   colors,
   fontFamily,
@@ -39,13 +38,8 @@ import {
   typography,
 } from "@/src/theme";
 
-function pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
 function defaultWhen() {
-  const d = new Date(Date.now() + 60 * 60 * 1000);
-  return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-  };
+  return new Date(Date.now() + 60 * 60 * 1000);
 }
 
 export default function Book() {
@@ -60,9 +54,7 @@ export default function Book() {
   const [dropoff, setDropoff] = useState("");
   const [pickupPin, setPickupPin] = useState<Pin>(null);
   const [dropoffPin, setDropoffPin] = useState<Pin>(null);
-  const initialWhen = useMemo(defaultWhen, []);
-  const [date, setDate] = useState(initialWhen.date);
-  const [time, setTime] = useState(initialWhen.time);
+  const [when, setWhen] = useState<Date>(() => defaultWhen());
   const [notes, setNotes] = useState("");
   const [quote, setQuote] = useState<PricingQuote | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -86,12 +78,7 @@ export default function Book() {
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (quoteTimer.current) clearTimeout(quoteTimer.current);
-    if (!selectedCar || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
-      setQuote(null);
-      return;
-    }
-    const scheduled = new Date(`${date}T${time}:00`);
-    if (isNaN(scheduled.getTime())) {
+    if (!selectedCar) {
       setQuote(null);
       return;
     }
@@ -100,7 +87,7 @@ export default function Book() {
         car_id: selectedCar,
         pickup_location: pickup,
         dropoff_location: dropoff,
-        scheduled_at: scheduled.toISOString(),
+        scheduled_at: when.toISOString(),
       })
         .then(setQuote)
         .catch(() => setQuote(null));
@@ -108,7 +95,7 @@ export default function Book() {
     return () => {
       if (quoteTimer.current) clearTimeout(quoteTimer.current);
     };
-  }, [selectedCar, pickup, dropoff, date, time]);
+  }, [selectedCar, pickup, dropoff, when]);
 
   const swap = () => {
     setPickup(dropoff);
@@ -124,15 +111,6 @@ export default function Book() {
       setError("Please enter pickup and drop-off locations.");
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
-      setError("Date must be YYYY-MM-DD and time HH:MM.");
-      return;
-    }
-    const scheduled = new Date(`${date}T${time}:00`);
-    if (isNaN(scheduled.getTime())) {
-      setError("Invalid date / time.");
-      return;
-    }
     setSubmitting(true);
     try {
       const order = await api.createOrder({
@@ -143,7 +121,7 @@ export default function Book() {
         pickup_lng: pickupPin?.lng ?? null,
         dropoff_lat: dropoffPin?.lat ?? null,
         dropoff_lng: dropoffPin?.lng ?? null,
-        scheduled_at: scheduled.toISOString(),
+        scheduled_at: when.toISOString(),
         notes: notes.trim() || undefined,
       });
       setPickup("");
@@ -282,36 +260,26 @@ export default function Book() {
 
           <Text style={styles.sectionLbl}>When</Text>
           <View style={styles.whenRow}>
-            <View style={[styles.whenCard, { flex: 1 }]}>
-              <View style={styles.whenHeader}>
-                <CalendarBlank size={18} color={colors.brandPrimary} weight="fill" />
-                <Text style={styles.whenLbl}>Date</Text>
-              </View>
-              <TextInput
-                testID="date-input"
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.muted}
-                autoCapitalize="none"
-                style={styles.whenInput}
-              />
-            </View>
-            <View style={[styles.whenCard, { flex: 1 }]}>
-              <View style={styles.whenHeader}>
-                <Clock size={18} color={colors.brandPrimary} weight="fill" />
-                <Text style={styles.whenLbl}>Time</Text>
-              </View>
-              <TextInput
-                testID="time-input"
-                value={time}
-                onChangeText={setTime}
-                placeholder="HH:MM"
-                placeholderTextColor={colors.muted}
-                autoCapitalize="none"
-                style={styles.whenInput}
-              />
-            </View>
+            <DateTimeField
+              testID="date-input"
+              mode="date"
+              value={when}
+              onChange={(d) => {
+                const next = new Date(when);
+                next.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                setWhen(next);
+              }}
+            />
+            <DateTimeField
+              testID="time-input"
+              mode="time"
+              value={when}
+              onChange={(d) => {
+                const next = new Date(when);
+                next.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                setWhen(next);
+              }}
+            />
           </View>
 
           <Text style={styles.sectionLbl}>Notes</Text>

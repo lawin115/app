@@ -51,7 +51,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Set pickup and drop-off on the map"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

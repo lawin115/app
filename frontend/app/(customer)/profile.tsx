@@ -1,4 +1,5 @@
 import { View, Text, Pressable, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   SignOut,
@@ -23,7 +24,13 @@ import {
 export default function CustomerProfile() {
   const insets = useSafeAreaInsets();
   const styles = useStyles();
+  const router = useRouter();
   const { user, logout } = useAuth();
+
+  const onLogout = async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]} testID="profile-screen">
@@ -84,7 +91,7 @@ export default function CustomerProfile() {
 
         <Pressable
           testID="logout-button"
-          onPress={logout}
+          onPress={onLogout}
           style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.9 }]}
         >
           <SignOut size={20} color={colors.error} weight="bold" />

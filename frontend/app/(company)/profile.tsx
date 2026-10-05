@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   SignOut,
@@ -25,11 +26,17 @@ import {
 export default function CompanyProfile() {
   const insets = useSafeAreaInsets();
   const styles = useStyles();
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [stats, setStats] = useState<{ avg_rating: number | null; rated_count: number }>({
     avg_rating: null,
     rated_count: 0,
   });
+
+  const onLogout = async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  };
 
   useEffect(() => {
     api.statsOrders().then(setStats).catch(() => undefined);
@@ -99,7 +106,7 @@ export default function CompanyProfile() {
 
         <Pressable
           testID="logout-button"
-          onPress={logout}
+          onPress={onLogout}
           style={({ pressed }) => [styles.logoutBtn, pressed && { opacity: 0.9 }]}
         >
           <SignOut size={20} color={colors.error} weight="bold" />
