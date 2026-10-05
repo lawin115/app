@@ -1,0 +1,158 @@
+{
+  "app_name": "LuxeDrive",
+  "personality": "6 Glass / Luxe (DARK)",
+  "personality_one_liner": "A cinematic, unhurried, and premium chauffeur experience emphasizing deep contrast, elegant typography, and frosted glass over dark surfaces.",
+  "color": {
+    "surface": "#09090B",
+    "onSurface": "#FAFAFA",
+    "surfaceSecondary": "#18181B",
+    "onSurfaceSecondary": "#E4E4E7",
+    "surfaceTertiary": "#27272A",
+    "onSurfaceTertiary": "#D4D4D8",
+    "surfaceInverse": "#FAFAFA",
+    "onSurfaceInverse": "#09090B",
+    "brand": "#C5A059",
+    "brandPrimary": "#C5A059",
+    "onBrandPrimary": "#09090B",
+    "brandSecondary": "#E6C875",
+    "onBrandSecondary": "#09090B",
+    "brandTertiary": "#3F331C",
+    "onBrandTertiary": "#E6C875",
+    "success": "#2E4E3F",
+    "onSuccess": "#A7F3D0",
+    "warning": "#5C4015",
+    "onWarning": "#FDE68A",
+    "error": "#5C1D1D",
+    "onError": "#FECACA",
+    "info": "#1E3A5F",
+    "onInfo": "#BFDBFE",
+    "border": "#27272A",
+    "borderStrong": "#3F3F46",
+    "divider": "#27272A",
+    "muted": "#A1A1AA",
+    "onBrand": "#09090B"
+  },
+  "typography": {
+    "displayFontFamily": "Fraunces",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Use generous margins and padding to let the content breathe. Do not crowd elements. Rely on spacing and blur rather than hard borders to separate sections.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "0",
+  "navigation": "stack_only",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use blur on bottom sheets over map/imagery.",
+      "Use glass on floating notification banners and sticky headers.",
+      "Ensure a dark tinted base (≥75% surface) under the blur so text remains perfectly readable."
+    ],
+    "dont's": [
+      "Do not blur standard form fields or text regions.",
+      "Do not stack more than two glass surfaces."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Auth",
+      "purpose": "A cinematic entry point to register/login for both customers and admins.",
+      "states": {
+        "loading": "Subtle pulsing brand logo.",
+        "empty": "N/A",
+        "error": "Glassmorphic snackbar at the top of the screen."
+      },
+      "layout": "Full-bleed background image of a dark luxury sedan. A glassmorphic card sits in the bottom half of the screen containing email/password inputs and a gold brandPrimary CTA. Include a toggle or secondary link to switch between Customer and Company (Admin) roles."
+    },
+    {
+      "name": "CustomerBooking",
+      "purpose": "Single-screen consolidated reservation flow (location, car type, datetime).",
+      "states": {
+        "loading": "Skeleton loaders over the vehicle selection cards.",
+        "empty": "N/A",
+        "error": "Inline red text below the faulty input."
+      },
+      "layout": "Background is a dark-themed map view. A persistent, draggable glassmorphic Bottom Sheet covers the lower 60% of the screen. The sheet contains: 1) Pick-up and Drop-off location fields (text input that can open a map selector), 2) A horizontal scrolling list of Car Types (VIP, Luxury, Normal) using large, cinematic car imagery with prices, 3) Date/time picker, 4) Notes field, and 5) Sticky brandPrimary 'Request Ride' button at the bottom."
+    },
+    {
+      "name": "CustomerOrderStatus",
+      "purpose": "Shows the live status of the requested ride (pending/accepted/rejected).",
+      "states": {
+        "loading": "Skeleton of the car card.",
+        "empty": "Illustration of a luxury steering wheel and text 'No active rides'.",
+        "error": "Error fetching order status, Retry button."
+      },
+      "layout": "Dark surface. The top shows a large beautiful image of the selected car category with a gradient scrim. Below that, an elegant timeline/status tracker (Pending -> Accepted). A prominent glassmorphic badge appears when the company accepts the order. Ride details (locations, time, price) are presented in clean, spaced text blocks below."
+    },
+    {
+      "name": "CompanyDashboard",
+      "purpose": "Admin view to see all incoming ride requests and accept/reject them.",
+      "states": {
+        "loading": "Centered sleek spinner.",
+        "empty": "Clean illustration of an empty premium garage. Text: 'No pending requests'.",
+        "error": "Network error message with a clean Retry button."
+      },
+      "layout": "Utility-first but still premium dark mode. A flat list of cards. Each card represents a customer order showing: Customer Name, Car Type, From/To locations, Date/Time, Price, and Notes. The card has a dual-action footer: subtle 'Reject' (surfaceTertiary) and prominent 'Accept' (brandPrimary). Uses a sticky header with a glass effect."
+    }
+  ],
+  "images": {
+    "auth_hero": {
+      "url": "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxkYXJrJTIwbHV4dXJ5JTIwc2VkYW4lMjBwcm9maWxlfGVufDB8fHx8MTc5MTIxODAzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Side profile of a dark luxury sedan in shadows"
+    },
+    "car_vip": {
+      "url": "https://images.unsplash.com/photo-1610099610040-ab19f3a5ec35?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxibGFjayUyMG1lcmNlZGVzJTIwcyUyMGNsYXNzfGVufDB8fHx8MTc5MTIxODAzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "VIP Car - Black Mercedes S Class"
+    },
+    "car_luxury": {
+      "url": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxibGFjayUyMG1vZGVybiUyMHNlZGFufGVufDB8fHx8MTc5MTIxODAzMXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Luxury Car - Black Modern Sedan"
+    },
+    "car_normal": {
+      "url": "https://images.unsplash.com/photo-1767972885672-d469ccec0bd2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxzaWx2ZXIlMjBtb2Rlcm4lMjBzZWRhbnxlbnwwfHx8fDE3OTEyMTgwMzF8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Normal Car - Silver Sedan"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Implement a premium 'Glass / Luxe' aesthetic in DARK mode. Do not use generic blue/indigo; rely on Midnight Black (#09090B) with Antique Gold (#C5A059) accents.",
+    "RTL & Arabic Support: Ensure layouts are RTL-friendly by strictly using React Native logical properties (paddingStart, marginEnd, borderStartWidth, etc.) instead of directional ones (paddingLeft, marginRight).",
+    "Use a single-screen booking pattern for the customer. Consolidate locations, car type selection, and datetime into one Bottom Sheet over a map, rather than a multi-step form.",
+    "Apply frosted glass (expo-blur) for the booking bottom sheet and any sticky headers or notification banners. Ensure the glass has a tinted background layer (rgba(9, 9, 11, 0.75)) to guarantee text readability.",
+    "Whenever displaying imagery with text overlay (like car selection cards), MUST apply a vertical gradient scrim (transparent to surface/surfaceInverse) underneath the text for contrast.",
+    "Do NOT use pure white backgrounds. Adhere strictly to the provided color palette (surface, surfaceSecondary).",
+    "Provide a toggle on the Auth screen to allow users to sign in/register as either a Customer or a Company Admin."
+  ]
+}
