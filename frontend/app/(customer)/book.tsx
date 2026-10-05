@@ -230,6 +230,10 @@ export default function Book() {
                 setPickupPin(p);
                 setDropoffPin(d);
               }}
+              onAddressResolved={(which, address) => {
+                if (which === "pickup") setPickup(address);
+                else setDropoff(address);
+              }}
             />
           </View>
 

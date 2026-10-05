@@ -3,33 +3,53 @@ import { View, Text, Pressable, ActivityIndicator, Linking } from "react-native"
 import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 import * as Location from "expo-location";
 
-import { colors, radius, spacing, typography } from "@/src/theme";
+import { colors, fontFamily, radius, spacing, typography } from "@/src/theme";
 
 export type Pin = { lat: number; lng: number } | null;
+export type PinMode = "pickup" | "dropoff";
 
 type Props = {
   pickup: Pin;
   dropoff: Pin;
   onChange: (next: { pickup: Pin; dropoff: Pin }) => void;
+  onAddressResolved?: (which: PinMode, address: string) => void;
   height?: number;
 };
 
 const DEFAULT_REGION: Region = {
   latitude: 24.4539,
-  longitude: 54.3773, // Abu Dhabi; a neutral default for a chauffeur app
+  longitude: 54.3773,
   latitudeDelta: 0.1,
   longitudeDelta: 0.1,
 };
 
-export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
-  const [mode, setMode] = useState<"pickup" | "dropoff">("pickup");
+function formatAddress(item: Location.LocationGeocodedAddress): string {
+  // Try to build a human-readable one-liner from the first result.
+  const parts = [
+    item.name,
+    item.street,
+    item.district,
+    item.city,
+    item.region,
+    item.country,
+  ].filter(Boolean) as string[];
+  // dedupe consecutive duplicates (e.g. name === street)
+  const dedup: string[] = [];
+  for (const p of parts) {
+    if (!dedup.includes(p)) dedup.push(p);
+  }
+  return dedup.join(", ");
+}
+
+export function MapPicker({ pickup, dropoff, onChange, onAddressResolved, height = 260 }: Props) {
+  const [mode, setMode] = useState<PinMode>("pickup");
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [locating, setLocating] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [permBlocked, setPermBlocked] = useState(false);
+  const [resolving, setResolving] = useState<PinMode | null>(null);
   const mapRef = useRef<MapView | null>(null);
 
-  // Center on existing pins if present
   useEffect(() => {
     const target = pickup || dropoff;
     if (target) {
@@ -40,7 +60,23 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
         longitudeDelta: 0.05,
       });
     }
-  }, []); // mount only
+  }, []);
+
+  const resolve = async (which: PinMode, lat: number, lng: number) => {
+    if (!onAddressResolved) return;
+    try {
+      setResolving(which);
+      const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+      if (results && results.length > 0) {
+        const line = formatAddress(results[0]);
+        if (line) onAddressResolved(which, line);
+      }
+    } catch {
+      // ignore — keep whatever text the user had
+    } finally {
+      setResolving(null);
+    }
+  };
 
   const useMyLocation = async () => {
     setLocating(true);
@@ -74,8 +110,9 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
       mapRef.current?.animateToRegion(nextRegion, 400);
       if (mode === "pickup") onChange({ pickup: next, dropoff });
       else onChange({ pickup, dropoff: next });
+      resolve(mode, next.lat, next.lng);
     } catch {
-      // swallow; keep default
+      // swallow
     } finally {
       setLocating(false);
     }
@@ -86,6 +123,7 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
     const next = { lat: latitude, lng: longitude };
     if (mode === "pickup") onChange({ pickup: next, dropoff });
     else onChange({ pickup, dropoff: next });
+    resolve(mode, latitude, longitude);
   };
 
   return (
@@ -93,8 +131,6 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
       style={{
         borderRadius: radius.lg,
         overflow: "hidden",
-        borderWidth: 1,
-        borderColor: colors.border,
         backgroundColor: colors.surfaceSecondary,
       }}
       testID="map-picker"
@@ -109,12 +145,22 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
             borderRadius: radius.pill,
             backgroundColor: mode === "pickup" ? colors.brandPrimary : colors.surfaceTertiary,
             alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: spacing.xs,
           }}
         >
+          {resolving === "pickup" ? (
+            <ActivityIndicator
+              size="small"
+              color={mode === "pickup" ? colors.onBrandPrimary : colors.brandPrimary}
+            />
+          ) : null}
           <Text style={{
             color: mode === "pickup" ? colors.onBrandPrimary : colors.onSurfaceTertiary,
             fontWeight: "700",
             fontSize: typography.sm,
+            fontFamily: fontFamily.text,
           }}>
             Set pickup
           </Text>
@@ -128,12 +174,22 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
             borderRadius: radius.pill,
             backgroundColor: mode === "dropoff" ? colors.brandPrimary : colors.surfaceTertiary,
             alignItems: "center",
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: spacing.xs,
           }}
         >
+          {resolving === "dropoff" ? (
+            <ActivityIndicator
+              size="small"
+              color={mode === "dropoff" ? colors.onBrandPrimary : colors.brandPrimary}
+            />
+          ) : null}
           <Text style={{
             color: mode === "dropoff" ? colors.onBrandPrimary : colors.onSurfaceTertiary,
             fontWeight: "700",
             fontSize: typography.sm,
+            fontFamily: fontFamily.text,
           }}>
             Set drop-off
           </Text>
@@ -158,7 +214,7 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
         {dropoff ? (
           <Marker
             coordinate={{ latitude: dropoff.lat, longitude: dropoff.lng }}
-            pinColor="#E6C875"
+            pinColor={colors.success}
             title="Drop-off"
           />
         ) : null}
@@ -173,29 +229,35 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             borderRadius: radius.pill,
-            backgroundColor: colors.surfaceTertiary,
-            borderWidth: 1,
-            borderColor: colors.border,
+            backgroundColor: colors.brandTertiary,
             flexDirection: "row",
             gap: spacing.sm,
             alignItems: "center",
           }}
         >
-          {locating ? (
-            <ActivityIndicator color={colors.brandPrimary} size="small" />
-          ) : null}
-          <Text style={{ color: colors.onSurfaceTertiary, fontWeight: "600", fontSize: typography.sm }}>
+          {locating ? <ActivityIndicator color={colors.brandPrimary} size="small" /> : null}
+          <Text style={{
+            color: colors.onBrandTertiary,
+            fontWeight: "700",
+            fontSize: typography.sm,
+            fontFamily: fontFamily.text,
+          }}>
             Use my location
           </Text>
         </Pressable>
-        <Text style={{ color: colors.muted, fontSize: typography.sm, flexShrink: 1 }}>
+        <Text style={{
+          color: colors.muted,
+          fontSize: typography.sm,
+          flexShrink: 1,
+          fontFamily: fontFamily.text,
+        }}>
           Tap the map to drop a pin
         </Text>
       </View>
 
       {permissionDenied ? (
         <View style={{ padding: spacing.sm, paddingTop: 0 }}>
-          <Text style={{ color: colors.muted, fontSize: typography.sm }}>
+          <Text style={{ color: colors.muted, fontSize: typography.sm, fontFamily: fontFamily.text }}>
             Location permission denied. You can still tap the map to pick a point.
           </Text>
           {permBlocked ? (
@@ -211,7 +273,12 @@ export function MapPicker({ pickup, dropoff, onChange, height = 260 }: Props) {
                 alignSelf: "flex-start",
               }}
             >
-              <Text style={{ color: colors.onBrandPrimary, fontWeight: "700", fontSize: typography.sm }}>
+              <Text style={{
+                color: colors.onBrandPrimary,
+                fontWeight: "700",
+                fontSize: typography.sm,
+                fontFamily: fontFamily.text,
+              }}>
                 Open Settings
               </Text>
             </Pressable>

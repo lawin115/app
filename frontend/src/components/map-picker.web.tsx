@@ -2,11 +2,13 @@ import { View, Text } from "react-native";
 import { colors, radius, spacing, typography } from "@/src/theme";
 
 export type Pin = { lat: number; lng: number } | null;
+export type PinMode = "pickup" | "dropoff";
 
 type Props = {
   pickup: Pin;
   dropoff: Pin;
   onChange: (next: { pickup: Pin; dropoff: Pin }) => void;
+  onAddressResolved?: (which: PinMode, address: string) => void;
   height?: number;
 };
 
