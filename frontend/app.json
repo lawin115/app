@@ -9,14 +9,21 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.taxibookingapp.aand12"
+      "bundleIdentifier": "com.emergent.taxibookingapp.aand12",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Set pickup and drop-off on the map"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.emergent.taxibookingapp.aand12"
+      "package": "com.emergent.taxibookingapp.aand12",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -38,7 +45,13 @@
       "expo-image",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Set pickup and drop-off on the map"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -2,34 +2,39 @@
 
 ## Problem
 A single mobile app for a car-booking company with two interfaces:
-- **Customer**: pick car type (VIP / Luxury / Normal), enter pickup & drop-off, date/time, optional notes, see price, send request.
-- **Company admin**: view incoming requests, accept or reject. When accepted, the customer sees the status update.
+- **Customer**: pick car type (VIP / Luxury / Normal), pick pickup & drop-off (map pins or text), date/time, optional notes, see dynamic price with surge badges, request ride, see driver info once accepted, rate after completion.
+- **Company admin**: view incoming requests, Accept (and assign a driver + plate) or Reject, mark Completed when the ride ends, see customer ratings and average rating.
 
-## MVP scope
-- Email/password auth (customer self-signup; admin via signup code `LUXE2026`).
-- Default admin seeded: `admin@luxedrive.com` / `Admin1234`.
-- Car catalog with fixed prices: VIP $150, Luxury $90, Normal $45.
-- Create order (status=pending).
-- Customer orders screen with polling for status updates.
-- Admin dashboard: filter by pending / accepted / rejected / all, accept or reject each order.
-- JWT bearer token stored in SecureStore (localStorage on web).
+## Features
+- Email / password auth, JWT bearer. Default admin seeded: `admin@luxedrive.com` / `Admin1234`. Admin signup code `LUXE2026`.
+- Fixed base prices: VIP $150, Luxury $90, Normal $45.
+- **Surge pricing** (additive on top of 1.0):
+  - Night surge +25% when local hour of `scheduled_at` is 22-04.
+  - Airport surge +20% when pickup or drop-off contains `airport` or `مطار`.
+- **Map pin picker** on native (react-native-maps + expo-location), with "Use my location" button and permission handling. On web preview, graceful text-only fallback.
+- **Driver assignment**: admin supplies `driver_name` (required), `driver_plate` (required), `driver_phone` (optional) when accepting. Customer sees these in a dedicated driver card.
+- **Ride completion**: admin marks an accepted ride as `completed`.
+- **Ratings**: customer rates 1-5 with optional comment after completion. Admin dashboard shows average rating and total ratings.
 
 ## Backend endpoints
-- `POST /api/auth/register` – customer or company_admin (requires admin_code).
-- `POST /api/auth/login` – returns bearer token.
-- `GET /api/auth/me`
-- `GET /api/cars`
-- `POST /api/orders` – customer only.
-- `GET /api/orders/my` – customer only.
-- `GET /api/orders?status_filter=` – admin only.
-- `PATCH /api/orders/{id}/status` – admin only (accept / reject).
-- `GET /api/orders/{id}` – owner or admin.
+- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`.
+- `GET /api/cars`.
+- `POST /api/pricing/quote` → `{ base, multiplier, reasons[], total }`.
+- `POST /api/orders` (customer) — server computes final price.
+- `GET /api/orders/my` (customer).
+- `GET /api/orders?status_filter=` (admin).
+- `GET /api/orders/stats` (admin) — avg_rating + rated_count.
+- `POST /api/orders/{id}/accept` (admin) with driver fields.
+- `POST /api/orders/{id}/reject` (admin).
+- `POST /api/orders/{id}/complete` (admin).
+- `POST /api/orders/{id}/rate` (customer) with rating 1-5.
+- `GET /api/orders/{id}` (owner or admin).
 
-## Design
-Dark luxe (Midnight + Antique Gold). See `design_guidelines.json`.
+## Status machine
+`pending → accepted → completed` or `pending → rejected`. Only `completed` orders can be rated. One rating per order.
 
-## Non-goals (MVP)
-- Map pin selection
+## Non-goals (future)
 - Push notifications
 - Payments
-- Multi-driver assignment
+- Live driver tracking
+- Reverse geocoding of pins into addresses

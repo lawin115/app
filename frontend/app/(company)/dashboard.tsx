@@ -3,10 +3,12 @@ import {
   View,
   Text,
   Pressable,
+  TextInput,
   FlatList,
   RefreshControl,
   ActivityIndicator,
   ScrollView,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,6 +20,7 @@ type Filter = "all" | OrderStatus;
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "pending", label: "Pending" },
   { key: "accepted", label: "Accepted" },
+  { key: "completed", label: "Completed" },
   { key: "rejected", label: "Rejected" },
   { key: "all", label: "All" },
 ];
@@ -37,18 +40,30 @@ export default function Dashboard() {
 
   const [filter, setFilter] = useState<Filter>("pending");
   const [orders, setOrders] = useState<Order[]>([]);
+  const [stats, setStats] = useState<{ avg_rating: number | null; rated_count: number }>({ avg_rating: null, rated_count: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actioning, setActioning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // accept modal
+  const [acceptFor, setAcceptFor] = useState<Order | null>(null);
+  const [driverName, setDriverName] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
+  const [driverPlate, setDriverPlate] = useState("");
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   const load = useCallback(
     async (showSpinner: boolean) => {
       if (showSpinner) setLoading(true);
       setError(null);
       try {
-        const list = await api.allOrders(filter === "all" ? undefined : filter);
+        const [list, s] = await Promise.all([
+          api.allOrders(filter === "all" ? undefined : filter),
+          api.statsOrders().catch(() => ({ avg_rating: null, rated_count: 0 })),
+        ]);
         setOrders(list);
+        setStats(s);
       } catch (e: any) {
         setError(e?.message || "Failed to load");
       } finally {
@@ -65,24 +80,64 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, [load]);
 
-  const act = async (id: string, status: "accepted" | "rejected") => {
-    setActioning(id);
+  const openAccept = (o: Order) => {
+    setAcceptFor(o);
+    setDriverName("");
+    setDriverPhone("");
+    setDriverPlate("");
+    setAcceptError(null);
+  };
+
+  const submitAccept = async () => {
+    if (!acceptFor) return;
+    if (!driverName.trim() || !driverPlate.trim()) {
+      setAcceptError("Driver name and plate are required.");
+      return;
+    }
+    setActioning(acceptFor.id);
     try {
-      await api.updateOrderStatus(id, status);
+      await api.acceptOrder(acceptFor.id, {
+        driver_name: driverName.trim(),
+        driver_phone: driverPhone.trim() || undefined,
+        driver_plate: driverPlate.trim(),
+      });
+      setAcceptFor(null);
       await load(false);
     } catch (e: any) {
-      setError(e?.message || "Action failed");
+      setAcceptError(e?.message || "Could not accept order");
     } finally {
       setActioning(null);
     }
   };
 
-  const counts = useMemo(() => {
-    return {
-      pending: orders.filter((o) => o.status === "pending").length,
-      total: orders.length,
-    };
-  }, [orders]);
+  const reject = async (id: string) => {
+    setActioning(id);
+    try {
+      await api.rejectOrder(id);
+      await load(false);
+    } catch (e: any) {
+      setError(e?.message || "Could not reject");
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const complete = async (id: string) => {
+    setActioning(id);
+    try {
+      await api.completeOrder(id);
+      await load(false);
+    } catch (e: any) {
+      setError(e?.message || "Could not complete");
+    } finally {
+      setActioning(null);
+    }
+  };
+
+  const counts = useMemo(() => ({
+    pending: orders.filter((o) => o.status === "pending").length,
+    total: orders.length,
+  }), [orders]);
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]} testID="dashboard-screen">
@@ -104,6 +159,12 @@ export default function Dashboard() {
         <View style={styles.statCard}>
           <Text style={styles.statVal}>{counts.total}</Text>
           <Text style={styles.statLbl}>In view</Text>
+        </View>
+        <View style={styles.statCard} testID="rating-stats">
+          <Text style={styles.statVal}>
+            {stats.avg_rating != null ? stats.avg_rating.toFixed(1) : "—"}
+          </Text>
+          <Text style={styles.statLbl}>Avg · {stats.rated_count}</Text>
         </View>
       </View>
 
@@ -160,6 +221,8 @@ export default function Dashboard() {
             const badgeStyle =
               item.status === "accepted"
                 ? styles.badgeOk
+                : item.status === "completed"
+                ? styles.badgeInfo
                 : item.status === "rejected"
                 ? styles.badgeBad
                 : styles.badgePending;
@@ -180,6 +243,16 @@ export default function Dashboard() {
                   <Text style={styles.price}>${item.price.toFixed(0)}</Text>
                 </View>
 
+                {item.surge_reasons && item.surge_reasons.length > 0 ? (
+                  <View style={styles.surgeRow}>
+                    {item.surge_reasons.map((r) => (
+                      <View key={r} style={styles.surgeChip}>
+                        <Text style={styles.surgeChipTxt}>{r}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
                 <View style={styles.sep} />
                 <Text style={styles.lbl}>When</Text>
                 <Text style={styles.val}>{formatDate(item.scheduled_at)}</Text>
@@ -194,12 +267,33 @@ export default function Dashboard() {
                   </>
                 ) : null}
 
+                {item.driver_name ? (
+                  <>
+                    <Text style={styles.lbl}>Driver</Text>
+                    <Text style={styles.val}>
+                      {item.driver_name} · {item.driver_plate}
+                      {item.driver_phone ? ` · ${item.driver_phone}` : ""}
+                    </Text>
+                  </>
+                ) : null}
+
+                {item.rating != null ? (
+                  <View style={styles.ratingBlock} testID={`admin-rating-${item.id}`}>
+                    <Text style={styles.ratingStars}>
+                      {"★".repeat(item.rating)}{"☆".repeat(5 - item.rating)}
+                    </Text>
+                    {item.rating_comment ? (
+                      <Text style={styles.ratingComment}>"{item.rating_comment}"</Text>
+                    ) : null}
+                  </View>
+                ) : null}
+
                 {item.status === "pending" ? (
                   <View style={styles.actions}>
                     <Pressable
                       testID={`reject-${item.id}`}
                       disabled={actioning === item.id}
-                      onPress={() => act(item.id, "rejected")}
+                      onPress={() => reject(item.id)}
                       style={[styles.actionBtn, styles.rejectBtn]}
                     >
                       <Text style={styles.rejectTxt}>Reject</Text>
@@ -207,22 +301,101 @@ export default function Dashboard() {
                     <Pressable
                       testID={`accept-${item.id}`}
                       disabled={actioning === item.id}
-                      onPress={() => act(item.id, "accepted")}
+                      onPress={() => openAccept(item)}
                       style={[styles.actionBtn, styles.acceptBtn]}
                     >
-                      {actioning === item.id ? (
-                        <ActivityIndicator color={colors.onBrandPrimary} />
-                      ) : (
-                        <Text style={styles.acceptTxt}>Accept</Text>
-                      )}
+                      <Text style={styles.acceptTxt}>Accept & assign</Text>
                     </Pressable>
                   </View>
+                ) : null}
+
+                {item.status === "accepted" ? (
+                  <Pressable
+                    testID={`complete-${item.id}`}
+                    disabled={actioning === item.id}
+                    onPress={() => complete(item.id)}
+                    style={[styles.actionBtn, styles.acceptBtn, { marginTop: spacing.md }]}
+                  >
+                    {actioning === item.id ? (
+                      <ActivityIndicator color={colors.onBrandPrimary} />
+                    ) : (
+                      <Text style={styles.acceptTxt}>Mark completed</Text>
+                    )}
+                  </Pressable>
                 ) : null}
               </View>
             );
           }}
         />
       )}
+
+      {/* Accept-with-driver modal */}
+      <Modal
+        visible={!!acceptFor}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAcceptFor(null)}
+      >
+        <View style={styles.modalScrim}>
+          <View style={styles.modalCard} testID="accept-modal">
+            <Text style={styles.modalTitle}>Assign a driver</Text>
+            <Text style={styles.modalSub}>
+              {acceptFor?.customer_name} · {acceptFor?.car_name} · ${acceptFor?.price.toFixed(0)}
+            </Text>
+            <Text style={styles.lbl}>Driver name</Text>
+            <TextInput
+              testID="driver-name-input"
+              value={driverName}
+              onChangeText={setDriverName}
+              placeholder="e.g. Khaled A."
+              placeholderTextColor={colors.muted}
+              style={styles.modalInput}
+            />
+            <Text style={styles.lbl}>Driver phone (optional)</Text>
+            <TextInput
+              testID="driver-phone-input"
+              value={driverPhone}
+              onChangeText={setDriverPhone}
+              placeholder="+971 50 123 4567"
+              placeholderTextColor={colors.muted}
+              keyboardType="phone-pad"
+              style={styles.modalInput}
+            />
+            <Text style={styles.lbl}>Car plate</Text>
+            <TextInput
+              testID="driver-plate-input"
+              value={driverPlate}
+              onChangeText={setDriverPlate}
+              placeholder="DXB-12345"
+              placeholderTextColor={colors.muted}
+              autoCapitalize="characters"
+              style={styles.modalInput}
+            />
+            {acceptError ? <Text style={styles.error}>{acceptError}</Text> : null}
+            <View style={styles.modalActions}>
+              <Pressable
+                testID="accept-cancel"
+                onPress={() => setAcceptFor(null)}
+                style={[styles.modalBtn, styles.rejectBtn]}
+              >
+                <Text style={styles.rejectTxt}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                testID="accept-confirm"
+                onPress={submitAccept}
+                disabled={!!actioning}
+                style={[styles.modalBtn, styles.acceptBtn]}
+              >
+                {actioning ? (
+                  <ActivityIndicator color={colors.onBrandPrimary} />
+                ) : (
+                  <Text style={styles.acceptTxt}>Confirm accept</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -255,7 +428,7 @@ const useStyles = makeStyles((c) => ({
   },
   statCard: {
     flex: 1,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: c.surfaceSecondary,
     borderWidth: 1,
@@ -310,8 +483,17 @@ const useStyles = makeStyles((c) => ({
   },
   badgePending: { backgroundColor: c.warning },
   badgeOk: { backgroundColor: c.success },
+  badgeInfo: { backgroundColor: c.info },
   badgeBad: { backgroundColor: c.error },
   badgeTxt: { color: c.onSurface, fontSize: typography.sm, fontWeight: "700" },
+  surgeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: 2, marginBottom: spacing.sm },
+  surgeChip: {
+    backgroundColor: c.warning,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  surgeChipTxt: { color: c.onWarning, fontSize: typography.sm, fontWeight: "700" },
   sep: { height: 1, backgroundColor: c.divider, marginVertical: spacing.sm },
   lbl: {
     color: c.muted,
@@ -321,6 +503,9 @@ const useStyles = makeStyles((c) => ({
     marginTop: spacing.sm,
   },
   val: { color: c.onSurface, fontSize: typography.lg, marginTop: 2 },
+  ratingBlock: { marginTop: spacing.sm },
+  ratingStars: { color: c.brandPrimary, fontSize: typography.xl, letterSpacing: 2 },
+  ratingComment: { color: c.muted, fontStyle: "italic", marginTop: spacing.xs },
   actions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
   actionBtn: {
     flex: 1,
@@ -340,4 +525,31 @@ const useStyles = makeStyles((c) => ({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
+  modalScrim: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: c.surfaceSecondary,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    borderTopWidth: 1,
+    borderColor: c.border,
+  },
+  modalTitle: { color: c.onSurface, fontSize: typography.xxl, fontWeight: "700" },
+  modalSub: { color: c.muted, marginTop: spacing.xs },
+  modalInput: {
+    backgroundColor: c.surfaceTertiary,
+    color: c.onSurface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: c.border,
+    marginTop: spacing.xs,
+    fontSize: typography.lg,
+  },
+  modalActions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.lg },
+  modalBtn: { flex: 1, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: "center" },
 }));

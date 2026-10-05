@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/src/auth";
-import { api, CarType } from "@/src/api";
+import { api, CarType, PricingQuote } from "@/src/api";
+import { MapPicker, Pin } from "@/src/components/map-picker";
 import { colors, makeStyles, radius, spacing, typography } from "@/src/theme";
 
 function pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
@@ -38,10 +39,13 @@ export default function Book() {
   const [selectedCar, setSelectedCar] = useState<string>("vip");
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
+  const [pickupPin, setPickupPin] = useState<Pin>(null);
+  const [dropoffPin, setDropoffPin] = useState<Pin>(null);
   const initialWhen = useMemo(defaultWhen, []);
   const [date, setDate] = useState(initialWhen.date);
   const [time, setTime] = useState(initialWhen.time);
   const [notes, setNotes] = useState("");
+  const [quote, setQuote] = useState<PricingQuote | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingCars, setLoadingCars] = useState(true);
@@ -59,6 +63,34 @@ export default function Book() {
   }, []);
 
   const activeCar = cars.find((c) => c.id === selectedCar);
+
+  // Live pricing quote (debounced)
+  const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    if (!selectedCar || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) {
+      setQuote(null);
+      return;
+    }
+    const scheduled = new Date(`${date}T${time}:00`);
+    if (isNaN(scheduled.getTime())) {
+      setQuote(null);
+      return;
+    }
+    quoteTimer.current = setTimeout(() => {
+      api.pricingQuote({
+        car_id: selectedCar,
+        pickup_location: pickup,
+        dropoff_location: dropoff,
+        scheduled_at: scheduled.toISOString(),
+      })
+        .then(setQuote)
+        .catch(() => setQuote(null));
+    }, 350);
+    return () => {
+      if (quoteTimer.current) clearTimeout(quoteTimer.current);
+    };
+  }, [selectedCar, pickup, dropoff, date, time]);
 
   const submit = async () => {
     setError(null);
@@ -81,11 +113,17 @@ export default function Book() {
         car_id: selectedCar,
         pickup_location: pickup.trim(),
         dropoff_location: dropoff.trim(),
+        pickup_lat: pickupPin?.lat ?? null,
+        pickup_lng: pickupPin?.lng ?? null,
+        dropoff_lat: dropoffPin?.lat ?? null,
+        dropoff_lng: dropoffPin?.lng ?? null,
         scheduled_at: scheduled.toISOString(),
         notes: notes.trim() || undefined,
       });
       setPickup("");
       setDropoff("");
+      setPickupPin(null);
+      setDropoffPin(null);
       setNotes("");
       router.push({ pathname: "/(customer)/orders", params: { highlight: order.id } });
     } catch (e: any) {
@@ -147,7 +185,7 @@ export default function Book() {
                   />
                   <View style={styles.carBody}>
                     <Text style={styles.carName}>{item.name}</Text>
-                    <Text style={styles.carPrice}>${item.price.toFixed(0)}</Text>
+                    <Text style={styles.carPrice}>from ${item.price.toFixed(0)}</Text>
                   </View>
                   {selectedCar === item.id ? (
                     <View style={styles.carBadge}>
@@ -165,10 +203,21 @@ export default function Book() {
             </Text>
           ) : null}
 
+          {/* Map */}
+          <Text style={styles.section}>Pin on map</Text>
+          <MapPicker
+            pickup={pickupPin}
+            dropoff={dropoffPin}
+            onChange={({ pickup: p, dropoff: d }) => {
+              setPickupPin(p);
+              setDropoffPin(d);
+            }}
+          />
+
           {/* Locations */}
           <Text style={styles.section}>Route</Text>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Pickup</Text>
+            <Text style={styles.label}>Pickup{pickupPin ? "  📍 pinned" : ""}</Text>
             <TextInput
               testID="pickup-input"
               value={pickup}
@@ -179,7 +228,7 @@ export default function Book() {
             />
           </View>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Drop-off</Text>
+            <Text style={styles.label}>Drop-off{dropoffPin ? "  📍 pinned" : ""}</Text>
             <TextInput
               testID="dropoff-input"
               value={dropoff}
@@ -236,13 +285,27 @@ export default function Book() {
 
           {/* Price summary */}
           <View style={styles.summary} testID="price-summary">
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.summaryLabel}>Estimated fare</Text>
               <Text style={styles.summaryCar}>{activeCar?.name ?? "—"}</Text>
+              {quote && quote.reasons.length > 0 ? (
+                <View style={styles.surgeRow}>
+                  {quote.reasons.map((r) => (
+                    <View key={r} style={styles.surgeChip} testID={`surge-${r}`}>
+                      <Text style={styles.surgeChipTxt}>{r}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
-            <Text style={styles.summaryPrice}>
-              {activeCar ? `$${activeCar.price.toFixed(2)}` : "—"}
-            </Text>
+            <View style={{ alignItems: "flex-end" }}>
+              {quote && quote.multiplier > 1 ? (
+                <Text style={styles.summaryBase}>${quote.base.toFixed(0)}</Text>
+              ) : null}
+              <Text style={styles.summaryPrice}>
+                {quote ? `$${quote.total.toFixed(2)}` : activeCar ? `$${activeCar.price.toFixed(2)}` : "—"}
+              </Text>
+            </View>
           </View>
 
           {error ? (
@@ -355,10 +418,20 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: c.surfaceSecondary,
     borderWidth: 1,
     borderColor: c.border,
+    gap: spacing.md,
   },
   summaryLabel: { color: c.muted, fontSize: typography.sm, textTransform: "uppercase", letterSpacing: 0.8 },
   summaryCar: { color: c.onSurface, fontSize: typography.lg, fontWeight: "700", marginTop: 2 },
+  summaryBase: { color: c.muted, fontSize: typography.sm, textDecorationLine: "line-through" },
   summaryPrice: { color: c.brandPrimary, fontSize: typography.xxl, fontWeight: "700" },
+  surgeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.sm },
+  surgeChip: {
+    backgroundColor: c.warning,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  surgeChipTxt: { color: c.onWarning, fontSize: typography.sm, fontWeight: "700" },
   cta: {
     marginTop: spacing.lg,
     backgroundColor: c.brandPrimary,

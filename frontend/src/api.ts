@@ -20,7 +20,14 @@ export type CarType = {
   image: string;
 };
 
-export type OrderStatus = "pending" | "accepted" | "rejected";
+export type OrderStatus = "pending" | "accepted" | "rejected" | "completed";
+
+export type PricingQuote = {
+  base: number;
+  multiplier: number;
+  reasons: string[];
+  total: number;
+};
 
 export type Order = {
   id: string;
@@ -29,12 +36,26 @@ export type Order = {
   customer_email: string;
   car_id: string;
   car_name: string;
+  base_price: number;
+  surge_multiplier: number;
+  surge_reasons: string[];
   price: number;
   pickup_location: string;
   dropoff_location: string;
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  dropoff_lat?: number | null;
+  dropoff_lng?: number | null;
   scheduled_at: string;
   notes?: string | null;
   status: OrderStatus;
+  driver_name?: string | null;
+  driver_phone?: string | null;
+  driver_plate?: string | null;
+  rating?: number | null;
+  rating_comment?: string | null;
+  rated_at?: string | null;
+  completed_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -65,16 +86,33 @@ export const api = {
     request<AuthResponse>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   me: () => request<User>("/auth/me"),
   listCars: () => request<CarType[]>("/cars"),
+  pricingQuote: (body: {
+    car_id: string;
+    pickup_location: string;
+    dropoff_location: string;
+    scheduled_at: string;
+  }) => request<PricingQuote>("/pricing/quote", { method: "POST", body: JSON.stringify(body) }),
   createOrder: (body: {
     car_id: string;
     pickup_location: string;
     dropoff_location: string;
+    pickup_lat?: number | null;
+    pickup_lng?: number | null;
+    dropoff_lat?: number | null;
+    dropoff_lng?: number | null;
     scheduled_at: string;
     notes?: string;
   }) => request<Order>("/orders", { method: "POST", body: JSON.stringify(body) }),
   myOrders: () => request<Order[]>("/orders/my"),
   allOrders: (status?: OrderStatus) =>
     request<Order[]>(`/orders${status ? `?status_filter=${status}` : ""}`),
-  updateOrderStatus: (id: string, status: "accepted" | "rejected") =>
-    request<Order>(`/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  acceptOrder: (id: string, body: { driver_name: string; driver_phone?: string; driver_plate: string }) =>
+    request<Order>(`/orders/${id}/accept`, { method: "POST", body: JSON.stringify(body) }),
+  rejectOrder: (id: string) =>
+    request<Order>(`/orders/${id}/reject`, { method: "POST" }),
+  completeOrder: (id: string) =>
+    request<Order>(`/orders/${id}/complete`, { method: "POST" }),
+  rateOrder: (id: string, body: { rating: number; comment?: string }) =>
+    request<Order>(`/orders/${id}/rate`, { method: "POST", body: JSON.stringify(body) }),
+  statsOrders: () => request<{ avg_rating: number | null; rated_count: number }>("/orders/stats"),
 };
