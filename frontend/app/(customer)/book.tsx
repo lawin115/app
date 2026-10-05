@@ -14,11 +14,30 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  MapPin,
+  Flag,
+  CalendarBlank,
+  Clock,
+  NotePencil,
+  CheckCircle,
+  Lightning,
+  CarProfile,
+  ArrowsDownUp,
+} from "phosphor-react-native";
 
 import { useAuth } from "@/src/auth";
 import { api, CarType, PricingQuote } from "@/src/api";
 import { MapPicker, Pin } from "@/src/components/map-picker";
-import { colors, makeStyles, radius, spacing, typography } from "@/src/theme";
+import {
+  colors,
+  fontFamily,
+  makeStyles,
+  radius,
+  shadow,
+  spacing,
+  typography,
+} from "@/src/theme";
 
 function pad(n: number) { return n < 10 ? `0${n}` : `${n}`; }
 function defaultWhen() {
@@ -33,7 +52,7 @@ export default function Book() {
   const insets = useSafeAreaInsets();
   const styles = useStyles();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [cars, setCars] = useState<CarType[]>([]);
   const [selectedCar, setSelectedCar] = useState<string>("vip");
@@ -64,7 +83,6 @@ export default function Book() {
 
   const activeCar = cars.find((c) => c.id === selectedCar);
 
-  // Live pricing quote (debounced)
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (quoteTimer.current) clearTimeout(quoteTimer.current);
@@ -91,6 +109,14 @@ export default function Book() {
       if (quoteTimer.current) clearTimeout(quoteTimer.current);
     };
   }, [selectedCar, pickup, dropoff, date, time]);
+
+  const swap = () => {
+    setPickup(dropoff);
+    setDropoff(pickup);
+    const pp = pickupPin;
+    setPickupPin(dropoffPin);
+    setDropoffPin(pp);
+  };
 
   const submit = async () => {
     setError(null);
@@ -137,19 +163,12 @@ export default function Book() {
     <View style={[styles.root, { paddingTop: insets.top }]} testID="book-screen">
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.hello}>Welcome{user?.name ? `, ${user.name.split(" ")[0]}` : ""}</Text>
-          <Text style={styles.title}>Book your ride</Text>
+          <Text style={styles.eyebrow}>Welcome{user?.name ? `, ${user.name.split(" ")[0]}` : ""}</Text>
+          <Text style={styles.title}>Where to?</Text>
         </View>
-        <Pressable
-          testID="my-rides-button"
-          onPress={() => router.push("/(customer)/orders")}
-          style={styles.iconBtn}
-        >
-          <Text style={styles.iconBtnTxt}>My rides</Text>
-        </Pressable>
-        <Pressable testID="logout-button" onPress={logout} style={styles.iconBtn}>
-          <Text style={styles.iconBtnTxt}>Logout</Text>
-        </Pressable>
+        <View style={styles.logoDot}>
+          <CarProfile size={22} color={colors.onBrandPrimary} weight="fill" />
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -157,12 +176,11 @@ export default function Book() {
         style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing.xxl }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 180 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Car selector */}
-          <Text style={styles.section}>Choose a car</Text>
+          <Text style={styles.sectionLbl}>Vehicle class</Text>
           {loadingCars ? (
             <ActivityIndicator color={colors.brandPrimary} style={{ marginVertical: spacing.lg }} />
           ) : (
@@ -172,78 +190,99 @@ export default function Book() {
               keyExtractor={(c) => c.id}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.carRow}
-              renderItem={({ item }) => (
-                <Pressable
-                  testID={`car-${item.id}`}
-                  onPress={() => setSelectedCar(item.id)}
-                  style={[styles.carCard, selectedCar === item.id && styles.carCardActive]}
-                >
-                  <Image source={item.image} style={styles.carImg} contentFit="cover" />
-                  <LinearGradient
-                    colors={["transparent", "rgba(9,9,11,0.95)"]}
-                    style={styles.carScrim}
-                  />
-                  <View style={styles.carBody}>
-                    <Text style={styles.carName}>{item.name}</Text>
-                    <Text style={styles.carPrice}>from ${item.price.toFixed(0)}</Text>
-                  </View>
-                  {selectedCar === item.id ? (
-                    <View style={styles.carBadge}>
-                      <Text style={styles.carBadgeTxt}>Selected</Text>
+              renderItem={({ item }) => {
+                const active = selectedCar === item.id;
+                return (
+                  <Pressable
+                    testID={`car-${item.id}`}
+                    onPress={() => setSelectedCar(item.id)}
+                    style={[styles.carCard, active && styles.carCardActive]}
+                  >
+                    <Image source={item.image} style={styles.carImg} contentFit="cover" />
+                    <LinearGradient
+                      colors={["transparent", "rgba(24,23,21,0.9)"]}
+                      style={styles.carScrim}
+                    />
+                    <View style={styles.carBody}>
+                      <Text style={styles.carName}>{item.name}</Text>
+                      <Text style={styles.carPrice}>from ${item.price.toFixed(0)}</Text>
                     </View>
-                  ) : null}
-                </Pressable>
-              )}
+                    {active ? (
+                      <View style={styles.carBadge}>
+                        <CheckCircle size={16} color={colors.onBrandPrimary} weight="fill" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              }}
             />
           )}
-
           {activeCar ? (
-            <Text style={styles.carDesc} testID="car-description">
-              {activeCar.description}
-            </Text>
+            <Text style={styles.carDesc} testID="car-description">{activeCar.description}</Text>
           ) : null}
 
-          {/* Map */}
-          <Text style={styles.section}>Pin on map</Text>
-          <MapPicker
-            pickup={pickupPin}
-            dropoff={dropoffPin}
-            onChange={({ pickup: p, dropoff: d }) => {
-              setPickupPin(p);
-              setDropoffPin(d);
-            }}
-          />
-
-          {/* Locations */}
-          <Text style={styles.section}>Route</Text>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Pickup{pickupPin ? "  📍 pinned" : ""}</Text>
-            <TextInput
-              testID="pickup-input"
-              value={pickup}
-              onChangeText={setPickup}
-              placeholder="Pickup address"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
-            />
-          </View>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Drop-off{dropoffPin ? "  📍 pinned" : ""}</Text>
-            <TextInput
-              testID="dropoff-input"
-              value={dropoff}
-              onChangeText={setDropoff}
-              placeholder="Destination address"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
+          <Text style={styles.sectionLbl}>Pin on map</Text>
+          <View style={styles.mapWrap}>
+            <MapPicker
+              pickup={pickupPin}
+              dropoff={dropoffPin}
+              onChange={({ pickup: p, dropoff: d }) => {
+                setPickupPin(p);
+                setDropoffPin(d);
+              }}
             />
           </View>
 
-          {/* Date & time */}
-          <Text style={styles.section}>When</Text>
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Date</Text>
+          <Text style={styles.sectionLbl}>Route</Text>
+          <View style={styles.routeCard}>
+            <View style={styles.routeRow}>
+              <View style={styles.iconPad}>
+                <MapPin size={20} color={colors.brandPrimary} weight="fill" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routeLbl}>Pickup{pickupPin ? " · pinned" : ""}</Text>
+                <TextInput
+                  testID="pickup-input"
+                  value={pickup}
+                  onChangeText={setPickup}
+                  placeholder="Pickup address"
+                  placeholderTextColor={colors.muted}
+                  style={styles.routeInput}
+                />
+              </View>
+            </View>
+            <View style={styles.swapWrap}>
+              <View style={styles.routeLine} />
+              <Pressable testID="swap-button" onPress={swap} style={styles.swapBtn}>
+                <ArrowsDownUp size={16} color={colors.brandPrimary} weight="bold" />
+              </Pressable>
+              <View style={styles.routeLine} />
+            </View>
+            <View style={styles.routeRow}>
+              <View style={styles.iconPad}>
+                <Flag size={20} color={colors.success} weight="fill" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routeLbl}>Drop-off{dropoffPin ? " · pinned" : ""}</Text>
+                <TextInput
+                  testID="dropoff-input"
+                  value={dropoff}
+                  onChangeText={setDropoff}
+                  placeholder="Destination address"
+                  placeholderTextColor={colors.muted}
+                  style={styles.routeInput}
+                />
+              </View>
+            </View>
+          </View>
+
+          <Text style={styles.sectionLbl}>When</Text>
+          <View style={styles.whenRow}>
+            <View style={[styles.whenCard, { flex: 1 }]}>
+              <View style={styles.whenHeader}>
+                <CalendarBlank size={18} color={colors.brandPrimary} weight="fill" />
+                <Text style={styles.whenLbl}>Date</Text>
+              </View>
               <TextInput
                 testID="date-input"
                 value={date}
@@ -251,11 +290,14 @@ export default function Book() {
                 placeholder="YYYY-MM-DD"
                 placeholderTextColor={colors.muted}
                 autoCapitalize="none"
-                style={styles.input}
+                style={styles.whenInput}
               />
             </View>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Time</Text>
+            <View style={[styles.whenCard, { flex: 1 }]}>
+              <View style={styles.whenHeader}>
+                <Clock size={18} color={colors.brandPrimary} weight="fill" />
+                <Text style={styles.whenLbl}>Time</Text>
+              </View>
               <TextInput
                 testID="time-input"
                 value={time}
@@ -263,14 +305,14 @@ export default function Book() {
                 placeholder="HH:MM"
                 placeholderTextColor={colors.muted}
                 autoCapitalize="none"
-                style={styles.input}
+                style={styles.whenInput}
               />
             </View>
           </View>
 
-          {/* Notes */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notes (optional)</Text>
+          <Text style={styles.sectionLbl}>Notes</Text>
+          <View style={styles.notesCard}>
+            <NotePencil size={20} color={colors.brandPrimary} weight="fill" />
             <TextInput
               testID="notes-input"
               value={notes}
@@ -279,39 +321,40 @@ export default function Book() {
               placeholderTextColor={colors.muted}
               multiline
               numberOfLines={3}
-              style={[styles.input, styles.inputMulti]}
+              style={styles.notesInput}
             />
-          </View>
-
-          {/* Price summary */}
-          <View style={styles.summary} testID="price-summary">
-            <View style={{ flex: 1 }}>
-              <Text style={styles.summaryLabel}>Estimated fare</Text>
-              <Text style={styles.summaryCar}>{activeCar?.name ?? "—"}</Text>
-              {quote && quote.reasons.length > 0 ? (
-                <View style={styles.surgeRow}>
-                  {quote.reasons.map((r) => (
-                    <View key={r} style={styles.surgeChip} testID={`surge-${r}`}>
-                      <Text style={styles.surgeChipTxt}>{r}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-            <View style={{ alignItems: "flex-end" }}>
-              {quote && quote.multiplier > 1 ? (
-                <Text style={styles.summaryBase}>${quote.base.toFixed(0)}</Text>
-              ) : null}
-              <Text style={styles.summaryPrice}>
-                {quote ? `$${quote.total.toFixed(2)}` : activeCar ? `$${activeCar.price.toFixed(2)}` : "—"}
-              </Text>
-            </View>
           </View>
 
           {error ? (
             <Text style={styles.error} testID="book-error">{error}</Text>
           ) : null}
+        </ScrollView>
 
+        {/* Sticky bottom CTA with price */}
+        <View style={[styles.ctaBar, { paddingBottom: insets.bottom + spacing.md }]} testID="price-summary">
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ctaBarLbl}>{activeCar?.name ?? "—"}</Text>
+            {quote && quote.multiplier > 1 ? (
+              <View style={styles.surgeRow}>
+                {quote.reasons.map((r) => (
+                  <View key={r} style={styles.surgeChip} testID={`surge-${r}`}>
+                    <Lightning size={12} color={colors.onWarning} weight="fill" />
+                    <Text style={styles.surgeChipTxt}>{r}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.ctaBarSub}>Estimated fare</Text>
+            )}
+          </View>
+          <View style={{ alignItems: "flex-end" }}>
+            {quote && quote.multiplier > 1 ? (
+              <Text style={styles.ctaBarBase}>${quote.base.toFixed(0)}</Text>
+            ) : null}
+            <Text style={styles.ctaBarPrice}>
+              {quote ? `$${quote.total.toFixed(0)}` : activeCar ? `$${activeCar.price.toFixed(0)}` : "—"}
+            </Text>
+          </View>
           <Pressable
             testID="request-ride-button"
             disabled={submitting}
@@ -321,10 +364,10 @@ export default function Book() {
             {submitting ? (
               <ActivityIndicator color={colors.onBrandPrimary} />
             ) : (
-              <Text style={styles.ctaTxt}>Request ride</Text>
+              <Text style={styles.ctaTxt}>Book</Text>
             )}
           </Pressable>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -335,118 +378,255 @@ const useStyles = makeStyles((c) => ({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
-  hello: { color: c.muted, fontSize: typography.sm },
-  title: { color: c.onSurface, fontSize: typography.xxl, fontWeight: "700" },
-  iconBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  iconBtnTxt: { color: c.onSurfaceSecondary, fontSize: typography.sm, fontWeight: "600" },
-  scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  section: {
+  eyebrow: {
     color: c.muted,
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 1.5,
+    fontSize: typography.sm,
+    fontFamily: fontFamily.text,
+    fontWeight: "600",
+  },
+  title: {
+    color: c.onSurface,
+    fontSize: typography.xxxl,
+    marginTop: 2,
+    fontFamily: fontFamily.display,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  logoDot: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.lg,
+    backgroundColor: c.brandPrimary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.sm,
+  },
+  scroll: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm },
+  sectionLbl: {
+    color: c.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
     fontSize: typography.sm,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
+    fontFamily: fontFamily.text,
+    fontWeight: "700",
   },
-  carRow: { gap: spacing.md, paddingVertical: spacing.xs, paddingHorizontal: 2 },
+  carRow: { gap: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: 2 },
   carCard: {
     width: 180,
     height: 220,
     borderRadius: radius.lg,
     overflow: "hidden",
     backgroundColor: c.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
+    ...shadow.md,
     flexShrink: 0,
   },
-  carCardActive: { borderColor: c.brandPrimary, borderWidth: 2 },
+  carCardActive: { borderWidth: 2, borderColor: c.brandPrimary },
   carImg: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   carScrim: { position: "absolute", left: 0, right: 0, bottom: 0, height: "70%" },
   carBody: { position: "absolute", left: spacing.md, right: spacing.md, bottom: spacing.md },
-  carName: { color: c.onSurface, fontSize: typography.xl, fontWeight: "700" },
-  carPrice: { color: c.brandPrimary, fontSize: typography.lg, fontWeight: "700", marginTop: 2 },
+  carName: {
+    color: c.onSurfaceInverse,
+    fontSize: typography.xl,
+    fontWeight: "700",
+    fontFamily: fontFamily.display,
+    letterSpacing: 0.3,
+  },
+  carPrice: {
+    color: c.brandSecondary,
+    fontSize: typography.lg,
+    fontWeight: "700",
+    marginTop: 2,
+    fontFamily: fontFamily.text,
+  },
   carBadge: {
     position: "absolute",
     top: spacing.sm,
     right: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    width: 28,
+    height: 28,
     borderRadius: radius.pill,
     backgroundColor: c.brandPrimary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.sm,
   },
-  carBadgeTxt: { color: c.onBrandPrimary, fontSize: typography.sm, fontWeight: "700" },
-  carDesc: { color: c.muted, marginTop: spacing.md, fontSize: typography.base },
-  inputGroup: { marginBottom: spacing.md },
-  label: {
+  carDesc: {
+    color: c.onSurfaceTertiary,
+    marginTop: spacing.md,
+    fontSize: typography.base,
+    fontFamily: fontFamily.text,
+    lineHeight: 20,
+  },
+  mapWrap: { ...shadow.sm, borderRadius: radius.lg },
+  routeCard: {
+    backgroundColor: c.surfaceSecondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow.sm,
+  },
+  routeRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  iconPad: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.pill,
+    backgroundColor: c.surfaceTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  routeLbl: {
     color: c.muted,
     fontSize: typography.sm,
-    marginBottom: spacing.xs,
+    fontFamily: fontFamily.text,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
+    fontWeight: "600",
   },
-  input: {
-    backgroundColor: c.surfaceSecondary,
+  routeInput: {
     color: c.onSurface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderWidth: 1,
-    borderColor: c.border,
     fontSize: typography.lg,
+    paddingVertical: 4,
+    fontFamily: fontFamily.text,
   },
-  inputMulti: { minHeight: 90, textAlignVertical: "top" },
-  row: { flexDirection: "row", gap: spacing.md },
-  summary: {
+  swapWrap: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: c.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    gap: spacing.md,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingStart: 48,
   },
-  summaryLabel: { color: c.muted, fontSize: typography.sm, textTransform: "uppercase", letterSpacing: 0.8 },
-  summaryCar: { color: c.onSurface, fontSize: typography.lg, fontWeight: "700", marginTop: 2 },
-  summaryBase: { color: c.muted, fontSize: typography.sm, textDecorationLine: "line-through" },
-  summaryPrice: { color: c.brandPrimary, fontSize: typography.xxl, fontWeight: "700" },
-  surgeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.sm },
+  routeLine: { flex: 1, height: 1, backgroundColor: c.divider },
+  swapBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: c.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: c.brandSecondary,
+  },
+  whenRow: { flexDirection: "row", gap: spacing.md },
+  whenCard: {
+    backgroundColor: c.surfaceSecondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadow.sm,
+  },
+  whenHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.xs },
+  whenLbl: {
+    color: c.muted,
+    fontSize: typography.sm,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontFamily: fontFamily.text,
+    fontWeight: "600",
+  },
+  whenInput: { color: c.onSurface, fontSize: typography.lg, fontFamily: fontFamily.text },
+  notesCard: {
+    backgroundColor: c.surfaceSecondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    flexDirection: "row",
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  notesInput: {
+    flex: 1,
+    color: c.onSurface,
+    fontSize: typography.lg,
+    fontFamily: fontFamily.text,
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  error: {
+    color: c.onError,
+    backgroundColor: c.error,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    fontFamily: fontFamily.text,
+  },
+  ctaBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    backgroundColor: c.surfaceSecondary,
+    borderTopWidth: 1,
+    borderColor: c.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    ...shadow.lg,
+  },
+  ctaBarLbl: {
+    color: c.onSurface,
+    fontSize: typography.base,
+    fontWeight: "700",
+    fontFamily: fontFamily.text,
+  },
+  ctaBarSub: {
+    color: c.muted,
+    fontSize: typography.sm,
+    marginTop: 2,
+    fontFamily: fontFamily.text,
+  },
+  ctaBarBase: {
+    color: c.muted,
+    fontSize: typography.sm,
+    textDecorationLine: "line-through",
+    fontFamily: fontFamily.text,
+  },
+  ctaBarPrice: {
+    color: c.brandPrimary,
+    fontSize: typography.xxl,
+    fontWeight: "700",
+    fontFamily: fontFamily.display,
+  },
+  surgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
   surgeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: c.warning,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,
   },
-  surgeChipTxt: { color: c.onWarning, fontSize: typography.sm, fontWeight: "700" },
+  surgeChipTxt: {
+    color: c.onWarning,
+    fontSize: typography.sm - 1,
+    fontWeight: "700",
+    fontFamily: fontFamily.text,
+  },
   cta: {
-    marginTop: spacing.lg,
     backgroundColor: c.brandPrimary,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md + 2,
     alignItems: "center",
+    justifyContent: "center",
+    minWidth: 92,
+    ...shadow.sm,
   },
-  ctaPressed: { opacity: 0.85 },
-  ctaTxt: { color: c.onBrandPrimary, fontWeight: "700", fontSize: typography.lg },
-  error: {
-    color: c.onError,
-    backgroundColor: c.error,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.md,
+  ctaPressed: { opacity: 0.9 },
+  ctaTxt: {
+    color: c.onBrandPrimary,
+    fontWeight: "700",
+    fontSize: typography.lg,
+    fontFamily: fontFamily.text,
+    letterSpacing: 0.3,
   },
 }));

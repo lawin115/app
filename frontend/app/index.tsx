@@ -13,7 +13,7 @@ export default function Index() {
     if (!user) {
       router.replace("/(auth)/login");
     } else if (user.role === "company_admin") {
-      router.replace("/(company)/dashboard");
+      router.replace("/(company)/orders");
     } else {
       router.replace("/(customer)/book");
     }

@@ -8,18 +8,42 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Hourglass,
+  MapPin,
+  Flag,
+  Lightning,
+  Star,
+  IdentificationBadge,
+  Phone,
+  CarProfile,
+  NotePencil,
+} from "phosphor-react-native";
 
 import { api, Order } from "@/src/api";
-import { colors, makeStyles, radius, spacing, typography } from "@/src/theme";
+import {
+  colors,
+  fontFamily,
+  makeStyles,
+  radius,
+  shadow,
+  spacing,
+  typography,
+} from "@/src/theme";
 
-function statusLabel(s: Order["status"]) {
-  if (s === "pending") return "Awaiting company";
-  if (s === "accepted") return "Accepted";
-  if (s === "completed") return "Completed";
-  return "Rejected";
+function statusMeta(s: Order["status"]) {
+  if (s === "pending") return { label: "Awaiting", color: colors.warning, Icon: Hourglass };
+  if (s === "accepted") return { label: "Accepted", color: colors.success, Icon: CheckCircle };
+  if (s === "completed") return { label: "Completed", color: colors.info, Icon: CheckCircle };
+  return { label: "Rejected", color: colors.error, Icon: XCircle };
 }
 
 function formatDate(iso: string) {
@@ -33,7 +57,6 @@ function formatDate(iso: string) {
 export default function Orders() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const params = useLocalSearchParams<{ highlight?: string }>();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -91,15 +114,8 @@ export default function Orders() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]} testID="orders-screen">
       <View style={styles.header}>
-        <Pressable
-          testID="back-button"
-          onPress={() => router.replace("/(customer)/book")}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backTxt}>Back</Text>
-        </Pressable>
+        <Text style={styles.eyebrow}>Your journeys</Text>
         <Text style={styles.title}>My rides</Text>
-        <View style={{ width: 60 }} />
       </View>
 
       {loading ? (
@@ -111,8 +127,8 @@ export default function Orders() {
           data={orders}
           keyExtractor={(o) => o.id}
           contentContainerStyle={{
-            padding: spacing.lg,
-            paddingBottom: insets.bottom + spacing.xl,
+            padding: spacing.xl,
+            paddingBottom: insets.bottom + spacing.xxl,
             gap: spacing.md,
           }}
           refreshControl={
@@ -127,6 +143,9 @@ export default function Orders() {
           }
           ListEmptyComponent={
             <View style={styles.empty} testID="orders-empty">
+              <View style={styles.emptyIcon}>
+                <Clock size={44} color={colors.brandPrimary} weight="duotone" />
+              </View>
               <Text style={styles.emptyTitle}>No rides yet</Text>
               <Text style={styles.emptyBody}>Your booked rides will appear here.</Text>
               {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -134,69 +153,78 @@ export default function Orders() {
           }
           renderItem={({ item }) => {
             const isHighlight = params.highlight === item.id;
-            const badgeStyle =
-              item.status === "accepted"
-                ? styles.badgeOk
-                : item.status === "completed"
-                ? styles.badgeInfo
-                : item.status === "rejected"
-                ? styles.badgeBad
-                : styles.badgePending;
+            const meta = statusMeta(item.status);
             return (
               <View
                 testID={`order-row-${item.id}`}
                 style={[styles.card, isHighlight && styles.cardHighlight]}
               >
-                <View style={styles.rowBetween}>
-                  <Text style={styles.car}>{item.car_name}</Text>
-                  <Text style={styles.price}>${item.price.toFixed(0)}</Text>
-                </View>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.whenTxt}>{formatDate(item.scheduled_at)}</Text>
-                  <View style={[styles.badge, badgeStyle]}>
-                    <Text style={styles.badgeTxt}>{statusLabel(item.status)}</Text>
+                <View style={styles.cardHeader}>
+                  <View style={styles.carPill}>
+                    <CarProfile size={16} color={colors.brandPrimary} weight="fill" />
+                    <Text style={styles.carPillTxt}>{item.car_name}</Text>
                   </View>
+                  <View style={[styles.statusChip, { backgroundColor: meta.color }]}>
+                    <meta.Icon size={14} color={colors.onBrandPrimary} weight="fill" />
+                    <Text style={styles.statusChipTxt}>{meta.label}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.priceRow}>
+                  <Text style={styles.price}>${item.price.toFixed(0)}</Text>
+                  <Text style={styles.when}>{formatDate(item.scheduled_at)}</Text>
                 </View>
 
                 {item.surge_reasons && item.surge_reasons.length > 0 ? (
                   <View style={styles.surgeRow}>
                     {item.surge_reasons.map((r) => (
                       <View key={r} style={styles.surgeChip}>
+                        <Lightning size={12} color={colors.onWarning} weight="fill" />
                         <Text style={styles.surgeChipTxt}>{r}</Text>
                       </View>
                     ))}
                   </View>
                 ) : null}
 
-                <View style={styles.sep} />
-                <Text style={styles.routeLbl}>Pickup</Text>
-                <Text style={styles.route}>{item.pickup_location}</Text>
-                <Text style={styles.routeLbl}>Drop-off</Text>
-                <Text style={styles.route}>{item.dropoff_location}</Text>
+                <View style={styles.routeBlock}>
+                  <View style={styles.routeLine}>
+                    <MapPin size={16} color={colors.brandPrimary} weight="fill" />
+                    <Text style={styles.routeTxt} numberOfLines={2}>{item.pickup_location}</Text>
+                  </View>
+                  <View style={styles.routeDots} />
+                  <View style={styles.routeLine}>
+                    <Flag size={16} color={colors.success} weight="fill" />
+                    <Text style={styles.routeTxt} numberOfLines={2}>{item.dropoff_location}</Text>
+                  </View>
+                </View>
+
                 {item.notes ? (
-                  <>
-                    <Text style={styles.routeLbl}>Notes</Text>
-                    <Text style={styles.route}>{item.notes}</Text>
-                  </>
+                  <View style={styles.noteBlock}>
+                    <NotePencil size={14} color={colors.muted} />
+                    <Text style={styles.noteTxt}>{item.notes}</Text>
+                  </View>
                 ) : null}
 
-                {item.status === "accepted" || item.status === "completed" ? (
+                {(item.status === "accepted" || item.status === "completed") && item.driver_name ? (
                   <View style={styles.driverCard} testID={`driver-${item.id}`}>
-                    <Text style={styles.driverLbl}>Your driver</Text>
-                    <Text style={styles.driverName}>{item.driver_name || "—"}</Text>
-                    <View style={styles.driverRow}>
-                      <View style={styles.plate}>
-                        <Text style={styles.plateTxt}>{item.driver_plate || "—"}</Text>
-                      </View>
-                      {item.driver_phone ? (
-                        <Text style={styles.driverPhone}>{item.driver_phone}</Text>
-                      ) : null}
+                    <View style={styles.driverAvatar}>
+                      <IdentificationBadge size={24} color={colors.onBrandPrimary} weight="fill" />
                     </View>
-                    {item.status === "accepted" ? (
-                      <Text style={styles.okBannerTxt}>
-                        Your order has been accepted. The driver will meet you at the pickup point.
-                      </Text>
-                    ) : null}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.driverLbl}>Your driver</Text>
+                      <Text style={styles.driverName}>{item.driver_name}</Text>
+                      <View style={styles.driverMetaRow}>
+                        <View style={styles.plate}>
+                          <Text style={styles.plateTxt}>{item.driver_plate}</Text>
+                        </View>
+                        {item.driver_phone ? (
+                          <View style={styles.driverPhoneRow}>
+                            <Phone size={14} color={colors.onSurfaceTertiary} />
+                            <Text style={styles.driverPhone}>{item.driver_phone}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
                   </View>
                 ) : null}
 
@@ -204,19 +232,27 @@ export default function Orders() {
                   <Pressable
                     testID={`rate-${item.id}`}
                     onPress={() => openRate(item)}
-                    style={styles.rateBtn}
+                    style={({ pressed }) => [styles.rateBtn, pressed && { opacity: 0.9 }]}
                   >
+                    <Star size={18} color={colors.onBrandPrimary} weight="fill" />
                     <Text style={styles.rateBtnTxt}>Rate your ride</Text>
                   </Pressable>
                 ) : null}
 
                 {item.rating != null ? (
-                  <View style={styles.ratingSummary} testID={`rating-${item.id}`}>
-                    <Text style={styles.ratingStars}>
-                      {"★".repeat(item.rating)}{"☆".repeat(5 - item.rating)}
-                    </Text>
+                  <View style={styles.ratingBlock} testID={`rating-${item.id}`}>
+                    <View style={{ flexDirection: "row", gap: 2 }}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star
+                          key={n}
+                          size={18}
+                          color={colors.brandPrimary}
+                          weight={n <= (item.rating ?? 0) ? "fill" : "regular"}
+                        />
+                      ))}
+                    </View>
                     {item.rating_comment ? (
-                      <Text style={styles.ratingComment}>"{item.rating_comment}"</Text>
+                      <Text style={styles.ratingComment}>&ldquo;{item.rating_comment}&rdquo;</Text>
                     ) : null}
                   </View>
                 ) : null}
@@ -226,7 +262,6 @@ export default function Orders() {
         />
       )}
 
-      {/* Rating modal */}
       <Modal
         visible={!!rateFor}
         animationType="slide"
@@ -234,54 +269,64 @@ export default function Orders() {
         onRequestClose={() => setRateFor(null)}
       >
         <View style={styles.modalScrim}>
-          <View style={styles.modalCard} testID="rate-modal">
-            <Text style={styles.modalTitle}>How was your ride?</Text>
-            <Text style={styles.modalSub}>{rateFor?.car_name} · ${rateFor?.price.toFixed(0)}</Text>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((n) => (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={{ width: "100%" }}
+          >
+            <View style={[styles.modalCard, { paddingBottom: insets.bottom + spacing.lg }]} testID="rate-modal">
+              <View style={styles.modalGrabber} />
+              <Text style={styles.modalTitle}>How was your ride?</Text>
+              <Text style={styles.modalSub}>{rateFor?.car_name} · ${rateFor?.price.toFixed(0)}</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable
+                    key={n}
+                    testID={`star-${n}`}
+                    onPress={() => setStars(n)}
+                    style={styles.starBtn}
+                  >
+                    <Star
+                      size={44}
+                      color={colors.brandPrimary}
+                      weight={n <= stars ? "fill" : "regular"}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+              <TextInput
+                testID="rate-comment-input"
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Say a few words (optional)"
+                placeholderTextColor={colors.muted}
+                multiline
+                numberOfLines={3}
+                style={styles.modalInput}
+              />
+              {rateError ? <Text style={styles.error}>{rateError}</Text> : null}
+              <View style={styles.modalActions}>
                 <Pressable
-                  key={n}
-                  testID={`star-${n}`}
-                  onPress={() => setStars(n)}
-                  style={styles.starBtn}
+                  testID="rate-cancel"
+                  onPress={() => setRateFor(null)}
+                  style={[styles.modalBtn, styles.modalBtnGhost]}
                 >
-                  <Text style={[styles.star, n <= stars && styles.starActive]}>★</Text>
+                  <Text style={styles.modalBtnGhostTxt}>Cancel</Text>
                 </Pressable>
-              ))}
+                <Pressable
+                  testID="rate-submit"
+                  onPress={submitRate}
+                  disabled={rateSubmitting}
+                  style={[styles.modalBtn, styles.modalBtnPrimary]}
+                >
+                  {rateSubmitting ? (
+                    <ActivityIndicator color={colors.onBrandPrimary} />
+                  ) : (
+                    <Text style={styles.modalBtnPrimaryTxt}>Submit</Text>
+                  )}
+                </Pressable>
+              </View>
             </View>
-            <TextInput
-              testID="rate-comment-input"
-              value={comment}
-              onChangeText={setComment}
-              placeholder="Say a few words (optional)"
-              placeholderTextColor={colors.muted}
-              multiline
-              numberOfLines={3}
-              style={styles.modalInput}
-            />
-            {rateError ? <Text style={styles.error}>{rateError}</Text> : null}
-            <View style={styles.modalActions}>
-              <Pressable
-                testID="rate-cancel"
-                onPress={() => setRateFor(null)}
-                style={[styles.modalBtn, styles.modalBtnGhost]}
-              >
-                <Text style={styles.modalBtnGhostTxt}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                testID="rate-submit"
-                onPress={submitRate}
-                disabled={rateSubmitting}
-                style={[styles.modalBtn, styles.modalBtnPrimary]}
-              >
-                {rateSubmitting ? (
-                  <ActivityIndicator color={colors.onBrandPrimary} />
-                ) : (
-                  <Text style={styles.modalBtnPrimaryTxt}>Submit</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -290,139 +335,246 @@ export default function Orders() {
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+  header: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  eyebrow: {
+    color: c.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    fontSize: typography.sm,
+    fontFamily: fontFamily.text,
+    fontWeight: "600",
   },
-  backBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: c.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
+  title: {
+    color: c.onSurface,
+    fontSize: typography.xxxl,
+    marginTop: 2,
+    fontFamily: fontFamily.display,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
-  backTxt: { color: c.onSurfaceSecondary, fontWeight: "600" },
-  title: { color: c.onSurface, fontSize: typography.xl, fontWeight: "700" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  empty: { alignItems: "center", padding: spacing.xxl, gap: spacing.sm },
-  emptyTitle: { color: c.onSurface, fontSize: typography.xl, fontWeight: "700" },
-  emptyBody: { color: c.muted, textAlign: "center" },
+  empty: {
+    alignItems: "center",
+    paddingVertical: spacing.xxxl,
+    gap: spacing.sm,
+  },
+  emptyIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: c.brandTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    color: c.onSurface,
+    fontSize: typography.xl,
+    fontWeight: "600",
+    fontFamily: fontFamily.display,
+  },
+  emptyBody: { color: c.muted, textAlign: "center", fontFamily: fontFamily.text },
   card: {
     backgroundColor: c.surfaceSecondary,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: c.border,
+    ...shadow.sm,
   },
-  cardHighlight: { borderColor: c.brandPrimary, borderWidth: 2 },
-  rowBetween: {
+  cardHighlight: { borderWidth: 2, borderColor: c.brandPrimary },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  car: { color: c.onSurface, fontSize: typography.xl, fontWeight: "700" },
-  price: { color: c.brandPrimary, fontSize: typography.xl, fontWeight: "700" },
-  whenTxt: { color: c.muted },
-  badge: {
+  carPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: c.brandTertiary,
     paddingHorizontal: spacing.md,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: radius.pill,
   },
-  badgePending: { backgroundColor: c.warning },
-  badgeOk: { backgroundColor: c.success },
-  badgeInfo: { backgroundColor: c.info },
-  badgeBad: { backgroundColor: c.error },
-  badgeTxt: { color: c.onSurface, fontSize: typography.sm, fontWeight: "700" },
-  surgeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.xs },
+  carPillTxt: {
+    color: c.onBrandTertiary,
+    fontWeight: "700",
+    fontSize: typography.sm,
+    fontFamily: fontFamily.text,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  statusChipTxt: {
+    color: c.onBrandPrimary,
+    fontSize: typography.sm,
+    fontWeight: "700",
+    fontFamily: fontFamily.text,
+  },
+  priceRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  price: {
+    color: c.onSurface,
+    fontSize: typography.xxxl,
+    fontWeight: "700",
+    fontFamily: fontFamily.display,
+  },
+  when: { color: c.muted, fontSize: typography.sm, fontFamily: fontFamily.text },
+  surgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: spacing.sm },
   surgeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: c.warning,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,
   },
-  surgeChipTxt: { color: c.onWarning, fontSize: typography.sm, fontWeight: "700" },
-  sep: { height: 1, backgroundColor: c.divider, marginVertical: spacing.sm },
-  routeLbl: {
-    color: c.muted,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    fontSize: typography.sm,
-    marginTop: spacing.sm,
+  surgeChipTxt: { color: c.onWarning, fontSize: typography.sm - 1, fontWeight: "700", fontFamily: fontFamily.text },
+  routeBlock: { marginTop: spacing.md },
+  routeLine: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  routeTxt: { flex: 1, color: c.onSurface, fontSize: typography.base, fontFamily: fontFamily.text },
+  routeDots: {
+    marginStart: 8,
+    width: 1,
+    height: 16,
+    borderStartWidth: 1,
+    borderColor: c.borderStrong,
+    borderStyle: "dashed",
+    marginVertical: 4,
   },
-  route: { color: c.onSurface, fontSize: typography.lg, marginTop: 2 },
+  noteBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: c.divider,
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  noteTxt: { flex: 1, color: c.onSurfaceTertiary, fontSize: typography.sm, fontFamily: fontFamily.text },
   driverCard: {
     marginTop: spacing.md,
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: c.brandTertiary,
-    borderWidth: 1,
-    borderColor: c.brandPrimary,
+    flexDirection: "row",
+    gap: spacing.md,
+    alignItems: "center",
+  },
+  driverAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: c.brandPrimary,
+    alignItems: "center",
+    justifyContent: "center",
   },
   driverLbl: {
     color: c.onBrandTertiary,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
-    fontSize: typography.sm,
-    opacity: 0.9,
+    letterSpacing: 1,
+    fontSize: typography.sm - 1,
+    fontFamily: fontFamily.text,
+    fontWeight: "700",
   },
-  driverName: { color: c.onBrandTertiary, fontSize: typography.xl, fontWeight: "700", marginTop: 2 },
-  driverRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.sm },
+  driverName: {
+    color: c.onSurface,
+    fontSize: typography.lg,
+    fontWeight: "700",
+    marginTop: 2,
+    fontFamily: fontFamily.text,
+  },
+  driverMetaRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 4, flexWrap: "wrap" },
   plate: {
-    backgroundColor: c.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
+    backgroundColor: c.surfaceSecondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: c.brandPrimary,
+    borderColor: c.brandSecondary,
   },
-  plateTxt: { color: c.brandPrimary, fontWeight: "700", letterSpacing: 1.2 },
-  driverPhone: { color: c.onBrandTertiary, fontSize: typography.base },
-  okBannerTxt: { color: c.onBrandTertiary, marginTop: spacing.sm, fontSize: typography.base },
+  plateTxt: {
+    color: c.onBrandTertiary,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    fontFamily: fontFamily.text,
+    fontSize: typography.sm,
+  },
+  driverPhoneRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  driverPhone: { color: c.onSurfaceTertiary, fontSize: typography.sm, fontFamily: fontFamily.text },
   rateBtn: {
     marginTop: spacing.md,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     backgroundColor: c.brandPrimary,
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    ...shadow.sm,
   },
-  rateBtnTxt: { color: c.onBrandPrimary, fontWeight: "700" },
-  ratingSummary: { marginTop: spacing.md },
-  ratingStars: { color: c.brandPrimary, fontSize: typography.xl, letterSpacing: 2 },
-  ratingComment: { color: c.muted, fontStyle: "italic", marginTop: spacing.xs },
+  rateBtnTxt: {
+    color: c.onBrandPrimary,
+    fontWeight: "700",
+    fontFamily: fontFamily.text,
+    fontSize: typography.lg,
+  },
+  ratingBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: c.divider,
+    gap: spacing.xs,
+  },
+  ratingComment: { color: c.muted, fontStyle: "italic", fontFamily: fontFamily.text },
   error: {
     marginTop: spacing.md,
     color: c.onError,
     backgroundColor: c.error,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
+    fontFamily: fontFamily.text,
   },
   modalScrim: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.75)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "flex-end",
   },
   modalCard: {
     backgroundColor: c.surfaceSecondary,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderColor: c.border,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.xl,
     gap: spacing.sm,
+    ...shadow.lg,
   },
-  modalTitle: { color: c.onSurface, fontSize: typography.xxl, fontWeight: "700" },
-  modalSub: { color: c.muted },
-  starsRow: { flexDirection: "row", justifyContent: "space-between", marginVertical: spacing.md },
+  modalGrabber: {
+    alignSelf: "center",
+    width: 48,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: c.border,
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    color: c.onSurface,
+    fontSize: typography.xxl,
+    fontWeight: "600",
+    fontFamily: fontFamily.display,
+  },
+  modalSub: { color: c.muted, fontFamily: fontFamily.text },
+  starsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
   starBtn: { padding: spacing.xs },
-  star: { fontSize: 44, color: c.surfaceTertiary },
-  starActive: { color: c.brandPrimary },
   modalInput: {
     backgroundColor: c.surfaceTertiary,
     color: c.onSurface,
@@ -430,13 +582,17 @@ const useStyles = makeStyles((c) => ({
     padding: spacing.md,
     minHeight: 80,
     textAlignVertical: "top",
-    borderWidth: 1,
-    borderColor: c.border,
+    fontFamily: fontFamily.text,
   },
   modalActions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.md },
-  modalBtn: { flex: 1, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: "center" },
-  modalBtnGhost: { backgroundColor: c.surfaceTertiary, borderWidth: 1, borderColor: c.border },
-  modalBtnGhostTxt: { color: c.onSurfaceTertiary, fontWeight: "700" },
-  modalBtnPrimary: { backgroundColor: c.brandPrimary },
-  modalBtnPrimaryTxt: { color: c.onBrandPrimary, fontWeight: "700" },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.pill,
+    alignItems: "center",
+  },
+  modalBtnGhost: { backgroundColor: c.surfaceTertiary },
+  modalBtnGhostTxt: { color: c.onSurfaceTertiary, fontWeight: "700", fontFamily: fontFamily.text },
+  modalBtnPrimary: { backgroundColor: c.brandPrimary, ...shadow.sm },
+  modalBtnPrimaryTxt: { color: c.onBrandPrimary, fontWeight: "700", fontFamily: fontFamily.text },
 }));

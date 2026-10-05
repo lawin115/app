@@ -20,7 +20,7 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <KeyboardProvider>
               <AuthProvider>
-                <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
+                <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
                 <Stack
                   screenOptions={{
                     headerShown: false,

@@ -1,39 +1,38 @@
 {
   "app_name": "LuxeDrive",
-  "personality": "6 Glass / Luxe (DARK)",
-  "personality_one_liner": "A cinematic, unhurried, and premium chauffeur experience emphasizing deep contrast, elegant typography, and frosted glass over dark surfaces.",
+  "personality": "3 Editorial structure with 6 Glass / Luxe surfaces",
+  "personality_one_liner": "A light, airy, and hyper-premium concierge experience that combines the typographic elegance of a luxury brochure with the fast, tactile clarity of a modern fintech app.",
   "color": {
-    "surface": "#09090B",
-    "onSurface": "#FAFAFA",
-    "surfaceSecondary": "#18181B",
-    "onSurfaceSecondary": "#E4E4E7",
-    "surfaceTertiary": "#27272A",
-    "onSurfaceTertiary": "#D4D4D8",
-    "surfaceInverse": "#FAFAFA",
-    "onSurfaceInverse": "#09090B",
-    "brand": "#C5A059",
-    "brandPrimary": "#C5A059",
-    "onBrandPrimary": "#09090B",
-    "brandSecondary": "#E6C875",
-    "onBrandSecondary": "#09090B",
-    "brandTertiary": "#3F331C",
-    "onBrandTertiary": "#E6C875",
-    "success": "#2E4E3F",
-    "onSuccess": "#A7F3D0",
-    "warning": "#5C4015",
-    "onWarning": "#FDE68A",
-    "error": "#5C1D1D",
-    "onError": "#FECACA",
-    "info": "#1E3A5F",
-    "onInfo": "#BFDBFE",
-    "border": "#27272A",
-    "borderStrong": "#3F3F46",
-    "divider": "#27272A",
-    "muted": "#A1A1AA",
-    "onBrand": "#09090B"
+    "surface": "#FBF9F6",
+    "onSurface": "#1C1B1A",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#2C2A29",
+    "surfaceTertiary": "#F2EFEA",
+    "onSurfaceTertiary": "#4A4744",
+    "surfaceInverse": "#181715",
+    "onSurfaceInverse": "#FBF9F6",
+    "brand": "#C6A87C",
+    "brandPrimary": "#C6A87C",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#E8D5B7",
+    "onBrandSecondary": "#4A3C24",
+    "brandTertiary": "#F6F0E4",
+    "onBrandTertiary": "#8A6B3D",
+    "success": "#437963",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D99B4A",
+    "onWarning": "#FFFFFF",
+    "error": "#B54D4A",
+    "onError": "#FFFFFF",
+    "info": "#5E7A91",
+    "onInfo": "#FFFFFF",
+    "border": "#EBE5DC",
+    "borderStrong": "#D1C7B8",
+    "divider": "#F2EFEA",
+    "muted": "#827D78"
   },
   "typography": {
-    "displayFontFamily": "Fraunces",
+    "displayFontFamily": "Cormorant Garamond",
     "textFontFamily": "Geist",
     "scale": {
       "sm": 12,
@@ -44,7 +43,7 @@
     }
   },
   "spacing": {
-    "rule": "Use generous margins and padding to let the content breathe. Do not crowd elements. Rely on spacing and blur rather than hard borders to separate sections.",
+    "rule": "Generous, breathable rhythm. Whitespace is a premium asset. Keep margins consistent (lg/xl) and avoid crowded components.",
     "xs": 4,
     "sm": 8,
     "md": 12,
@@ -59,19 +58,19 @@
     "lg": 20,
     "pill": 999
   },
-  "shadow_tier": "0",
-  "navigation": "stack_only",
+  "shadow_tier": 2,
+  "navigation": "bottom_tabs",
   "icon_set": "Phosphor",
   "glassmorphism": {
     "enabled": true,
     "do's": [
-      "Use blur on bottom sheets over map/imagery.",
-      "Use glass on floating notification banners and sticky headers.",
-      "Ensure a dark tinted base (≥75% surface) under the blur so text remains perfectly readable."
+      "Use frosted glass on the bottom tab bar.",
+      "Apply glass overlay on the sticky bottom CTA bar in the booking screen.",
+      "Use glass headers for the bottom sheets (Rate Modal, Accept Order sheet)."
     ],
     "dont's": [
-      "Do not blur standard form fields or text regions.",
-      "Do not stack more than two glass surfaces."
+      "Do not blur standard list rows or static form inputs.",
+      "Do not use glass backgrounds on top of empty or plain color backgrounds; ensure there's overlapping content underneath to justify the blur."
     ]
   },
   "platform_libraries": {
@@ -89,70 +88,81 @@
   "screens": [
     {
       "name": "Auth",
-      "purpose": "A cinematic entry point to register/login for both customers and admins.",
+      "purpose": "Email/password authentication with a prominent segmented control to switch between Customer and Company roles.",
       "states": {
-        "loading": "Subtle pulsing brand logo.",
+        "loading": "Centered premium gold spinner.",
         "empty": "N/A",
-        "error": "Glassmorphic snackbar at the top of the screen."
+        "error": "Standard text error below inputs, no aggressive red cards."
       },
-      "layout": "Full-bleed background image of a dark luxury sedan. A glassmorphic card sits in the bottom half of the screen containing email/password inputs and a gold brandPrimary CTA. Include a toggle or secondary link to switch between Customer and Company (Admin) roles."
+      "layout": "Large editorial serif header at the top. Segmented control for role selection. Single column form inputs with floating labels. Sticky primary CTA at the bottom. Use generous vertical spacing."
     },
     {
-      "name": "CustomerBooking",
-      "purpose": "Single-screen consolidated reservation flow (location, car type, datetime).",
+      "name": "Customer - Book",
+      "purpose": "The primary concierge interface for customers to select a vehicle, input ride details, and view pricing.",
       "states": {
-        "loading": "Skeleton loaders over the vehicle selection cards.",
+        "loading": "Skeleton cards for vehicle carousel.",
         "empty": "N/A",
-        "error": "Inline red text below the faulty input."
+        "error": "Error boundary with 'Unable to load fleet' and retry button."
       },
-      "layout": "Background is a dark-themed map view. A persistent, draggable glassmorphic Bottom Sheet covers the lower 60% of the screen. The sheet contains: 1) Pick-up and Drop-off location fields (text input that can open a map selector), 2) A horizontal scrolling list of Car Types (VIP, Luxury, Normal) using large, cinematic car imagery with prices, 3) Date/time picker, 4) Notes field, and 5) Sticky brandPrimary 'Request Ride' button at the bottom."
+      "layout": "Top section: A visually striking horizontal carousel of car categories (VIP, Luxury, Normal) using edge-to-edge images with a bottom-to-top gradient scrim for text legibility. Middle section: Clean, icon-led input fields for Pickup/Drop-off (with a swap icon), Date/Time, and Notes in soft white cards (surfaceSecondary) against the warm background (surface). Bottom section: A sticky frosted glass container holding the live pricing, surge badges (brandTertiary chips), and a primary 'Book Ride' CTA."
     },
     {
-      "name": "CustomerOrderStatus",
-      "purpose": "Shows the live status of the requested ride (pending/accepted/rejected).",
+      "name": "Customer - My Rides",
+      "purpose": "A timeline of the user's booking history and active requests.",
       "states": {
-        "loading": "Skeleton of the car card.",
-        "empty": "Illustration of a luxury steering wheel and text 'No active rides'.",
-        "error": "Error fetching order status, Retry button."
+        "loading": "List skeleton.",
+        "empty": "Illustration of a key or empty road with 'No rides booked yet' and a CTA to Book.",
+        "error": "Retry fetch prompt."
       },
-      "layout": "Dark surface. The top shows a large beautiful image of the selected car category with a gradient scrim. Below that, an elegant timeline/status tracker (Pending -> Accepted). A prominent glassmorphic badge appears when the company accepts the order. Ride details (locations, time, price) are presented in clean, spaced text blocks below."
+      "layout": "Vertical list of soft cards (surfaceSecondary). Each card displays route, date, and a prominent status badge. If 'Accepted' or 'Completed', embed a sub-card showing the Driver's profile picture, name, and car plate. Include a 'Rate' button on completed rides that triggers the Rate Modal."
     },
     {
-      "name": "CompanyDashboard",
-      "purpose": "Admin view to see all incoming ride requests and accept/reject them.",
+      "name": "Company - Orders",
+      "purpose": "Admin dashboard to process incoming ride requests and view live operational stats.",
       "states": {
-        "loading": "Centered sleek spinner.",
-        "empty": "Clean illustration of an empty premium garage. Text: 'No pending requests'.",
-        "error": "Network error message with a clean Retry button."
+        "loading": "Grid and list skeletons.",
+        "empty": "Illustration with 'No active requests at the moment.'",
+        "error": "Retry prompt."
       },
-      "layout": "Utility-first but still premium dark mode. A flat list of cards. Each card represents a customer order showing: Customer Name, Car Type, From/To locations, Date/Time, Price, and Notes. The card has a dual-action footer: subtle 'Reject' (surfaceTertiary) and prominent 'Accept' (brandPrimary). Uses a sticky header with a glass effect."
+      "layout": "Top section: 2-column grid of stat tiles (e.g., Pending Count, Avg Rating) using surfaceSecondary with shadow tier 2. Below stats: Sticky horizontal scrollable filter chips (All, Pending, Accepted, Rejected). Main content: List of incoming order cards. Tapping 'Accept' triggers a bottom sheet to assign a driver."
+    },
+    {
+      "name": "Rate Modal",
+      "purpose": "Bottom sheet for customer to rate completed rides.",
+      "states": {
+        "loading": "Button loading state during submit.",
+        "empty": "N/A",
+        "error": "Toast on submit failure."
+      },
+      "layout": "gorhom/bottom-sheet overlay. Large elegant typography asking for feedback, 5 large tappable Phosphor star icons, followed by a multiline text input for comments. 'Submit' CTA pinned to keyboard."
     }
   ],
   "images": {
-    "auth_hero": {
-      "url": "https://images.unsplash.com/photo-1485291571150-772bcfc10da5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxkYXJrJTIwbHV4dXJ5JTIwc2VkYW4lMjBwcm9maWxlfGVufDB8fHx8MTc5MTIxODAzMXww&ixlib=rb-4.1.0&q=85",
-      "alt": "Side profile of a dark luxury sedan in shadows"
+    "hero_car_vip": {
+      "url": "https://images.unsplash.com/photo-1696233016084-30c8345d85ff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzR8MHwxfHNlYXJjaHwxfHxyb2xscyUyMHJveWNlJTIwcGhhbnRvbSUyMGV4dGVyaW9yJTIwbHV4dXJ5fGVufDB8fHx8MTc5MTIyMjE0MXww&ixlib=rb-4.1.0&q=85",
+      "alt": "White Rolls Royce Phantom exterior representing VIP car category"
     },
-    "car_vip": {
-      "url": "https://images.unsplash.com/photo-1610099610040-ab19f3a5ec35?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NzN8MHwxfHNlYXJjaHwxfHxibGFjayUyMG1lcmNlZGVzJTIwcyUyMGNsYXNzfGVufDB8fHx8MTc5MTIxODAzMXww&ixlib=rb-4.1.0&q=85",
-      "alt": "VIP Car - Black Mercedes S Class"
+    "hero_car_luxury": {
+      "url": "https://images.unsplash.com/photo-1610099610040-ab19f3a5ec35?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxtZXJjZWRlcyUyMHMlMjBjbGFzcyUyMGJsYWNrJTIwbHV4dXJ5JTIwY2FyfGVufDB8fHx8MTc5MTIyMjE0MXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Black Mercedes S-Class representing Luxury car category"
     },
-    "car_luxury": {
-      "url": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxibGFjayUyMG1vZGVybiUyMHNlZGFufGVufDB8fHx8MTc5MTIxODAzMXww&ixlib=rb-4.1.0&q=85",
-      "alt": "Luxury Car - Black Modern Sedan"
+    "hero_car_normal": {
+      "url": "https://images.unsplash.com/photo-1671332752309-259609d9801f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwxfHxtZXJjZWRlcyUyMGUlMjBjbGFzcyUyMGJsYWNrJTIwc2VkYW58ZW58MHx8fHwxNzkxMjIyMTQxfDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Black Mercedes E-Class representing Normal car category"
     },
-    "car_normal": {
-      "url": "https://images.unsplash.com/photo-1767972885672-d469ccec0bd2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2MDV8MHwxfHNlYXJjaHwxfHxzaWx2ZXIlMjBtb2Rlcm4lMjBzZWRhbnxlbnwwfHx8fDE3OTEyMTgwMzF8MA&ixlib=rb-4.1.0&q=85",
-      "alt": "Normal Car - Silver Sedan"
+    "driver_avatar": {
+      "url": "https://images.unsplash.com/photo-1607642857266-88f5f03e66c6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBjaGF1ZmZldXIlMjBkcml2ZXIlMjBzdWl0fGVufDB8fHx8MTc5MTIyMjE0MXww&ixlib=rb-4.1.0&q=85",
+      "alt": "Professional chauffeur driver in suit"
     }
   },
   "instructions_to_main_agent": [
-    "Implement a premium 'Glass / Luxe' aesthetic in DARK mode. Do not use generic blue/indigo; rely on Midnight Black (#09090B) with Antique Gold (#C5A059) accents.",
-    "RTL & Arabic Support: Ensure layouts are RTL-friendly by strictly using React Native logical properties (paddingStart, marginEnd, borderStartWidth, etc.) instead of directional ones (paddingLeft, marginRight).",
-    "Use a single-screen booking pattern for the customer. Consolidate locations, car type selection, and datetime into one Bottom Sheet over a map, rather than a multi-step form.",
-    "Apply frosted glass (expo-blur) for the booking bottom sheet and any sticky headers or notification banners. Ensure the glass has a tinted background layer (rgba(9, 9, 11, 0.75)) to guarantee text readability.",
-    "Whenever displaying imagery with text overlay (like car selection cards), MUST apply a vertical gradient scrim (transparent to surface/surfaceInverse) underneath the text for contrast.",
-    "Do NOT use pure white backgrounds. Adhere strictly to the provided color palette (surface, surfaceSecondary).",
-    "Provide a toggle on the Auth screen to allow users to sign in/register as either a Customer or a Company Admin."
+    "Strictly follow the Light Premium aesthetic. Backgrounds should use the warm off-white (surface #FBF9F6), while cards are pure white (surfaceSecondary #FFFFFF) with soft shadows (shadow_tier 2) to establish depth and elegance.",
+    "Do NOT use Material gray backgrounds or flat borders. The design relies on shadow and whitespace to separate content.",
+    "All headings must use the provided display serif font (Cormorant Garamond) to maintain the editorial/brochure feel, while body and UI controls use the sans-serif (Geist) for clarity.",
+    "Use Phosphor icons heavily: car types, status badges, price items, driver details, and stat tiles all require clear icons. Keep icon weights consistent (Regular or Light).",
+    "For the booking screen, ensure the bottom CTA (price + book button) sits within a sticky frosted glass container (using expo-blur) layered over the scrollable content.",
+    "Never use blue or purple anywhere in the app. Status colors are provided, and brand emphasis is strictly gold (brandPrimary).",
+    "Remember to include RTL-safe logical properties (paddingStart, alignEnd, etc.) as the app will eventually support an Arabic toggle.",
+    "Apply gradient scrims (bottom-to-top, transparent to 70% surfaceInverse) to the bottom of all car carousel images to ensure text legibility over the photos."
   ]
 }
